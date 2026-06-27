@@ -464,12 +464,11 @@ function DrivePage() {
                 <img src={preview.url} alt={preview.name} className="max-h-[70vh] w-full object-contain" />
               )}
               {preview.mime === "application/pdf" && (
-                <object data={preview.url} type="application/pdf" className="w-full h-[70vh]">
-                  <div className="p-6 text-sm text-center space-y-3">
-                    <p>Tarayıcınız PDF'yi gömülü olarak göstermeyi engelledi.</p>
-                    <a href={preview.url} target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 rounded bg-primary text-primary-foreground">Yeni sekmede aç</a>
-                  </div>
-                </object>
+                <iframe
+                  src={preview.url}
+                  className="w-full h-[75vh] bg-background"
+                  title={preview.name}
+                />
               )}
               {preview.mime.startsWith("video/") && (
                 <video src={preview.url} controls className="w-full max-h-[70vh]" />
@@ -480,9 +479,6 @@ function DrivePage() {
               {preview.mime.startsWith("text/") && (
                 <iframe src={preview.url} className="w-full h-[70vh] bg-background" title={preview.name} />
               )}
-              <div className="p-3 border-t flex justify-end">
-                <a href={preview.url} target="_blank" rel="noopener noreferrer" className="text-xs underline text-muted-foreground hover:text-foreground">Yeni sekmede aç</a>
-              </div>
             </div>
           )}
         </DialogContent>
