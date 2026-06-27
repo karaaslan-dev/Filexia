@@ -1,0 +1,142 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+export const getMyProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile, error } = await context.supabase
+      .from("profiles")
+      .select("id, email, display_name, storage_quota_mb, storage_used_bytes, is_active, must_change_password")
+      .eq("id", context.userId)
+      .single();
+    if (error) throw new Error(error.message);
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    const { data: settings } = await context.supabase.from("app_settings").select("max_file_size_mb, allowed_mime_prefixes").eq("id", 1).single();
+    return { profile, isAdmin: !!isAdmin, settings };
+  });
+
+export const listMyFiles = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("files")
+      .select("id, name, size_bytes, mime_type, created_at, storage_path")
+      .eq("owner_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+// Validate and register a file already uploaded to storage. If validation fails,
+// delete the uploaded object so storage doesn't drift from the files table.
+export const registerFile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { storage_path: string; name: string; size_bytes: number; mime_type: string }) =>
+    z.object({
+      storage_path: z.string().min(1).max(512),
+      name: z.string().min(1).max(255),
+      size_bytes: z.number().int().positive(),
+      mime_type: z.string().max(255),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    // Storage path must start with userId/
+    if (!data.storage_path.startsWith(`${context.userId}/`)) {
+      throw new Error("Invalid storage path");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    async function cleanup() {
+      await supabaseAdmin.storage.from("user-files").remove([data.storage_path]);
+    }
+
+    const { data: settings } = await context.supabase.from("app_settings").select("max_file_size_mb, allowed_mime_prefixes").eq("id", 1).single();
+    const maxBytes = (settings?.max_file_size_mb ?? 5120) * 1024 * 1024;
+    if (data.size_bytes > maxBytes) {
+      await cleanup();
+      throw new Error(`File exceeds maximum size of ${settings?.max_file_size_mb} MB`);
+    }
+    const allowed = settings?.allowed_mime_prefixes ?? [];
+    if (allowed.length && !allowed.some((p: string) => data.mime_type.startsWith(p))) {
+      await cleanup();
+      throw new Error("File type not allowed");
+    }
+
+    const { data: profile } = await context.supabase.from("profiles").select("storage_quota_mb, storage_used_bytes, is_active").eq("id", context.userId).single();
+    if (!profile?.is_active) {
+      await cleanup();
+      throw new Error("Account is inactive");
+    }
+    const quotaBytes = profile.storage_quota_mb * 1024 * 1024;
+    if (profile.storage_used_bytes + data.size_bytes > quotaBytes) {
+      await cleanup();
+      throw new Error("Storage quota exceeded");
+    }
+
+    const { data: inserted, error } = await context.supabase
+      .from("files")
+      .insert({
+        owner_id: context.userId,
+        name: data.name,
+        storage_path: data.storage_path,
+        size_bytes: data.size_bytes,
+        mime_type: data.mime_type,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      await cleanup();
+      throw new Error(error.message);
+    }
+    return { id: inserted.id };
+  });
+
+export const getDownloadUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { file_id: string }) => z.object({ file_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: file, error } = await context.supabase
+      .from("files")
+      .select("storage_path, name")
+      .eq("id", data.file_id)
+      .single();
+    if (error || !file) throw new Error("File not found");
+    const { data: signed, error: sErr } = await context.supabase.storage
+      .from("user-files")
+      .createSignedUrl(file.storage_path, 60 * 5, { download: file.name });
+    if (sErr) throw new Error(sErr.message);
+    return { url: signed.signedUrl };
+  });
+
+export const deleteFile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { file_id: string }) => z.object({ file_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: file, error } = await context.supabase
+      .from("files")
+      .select("id, storage_path, owner_id")
+      .eq("id", data.file_id)
+      .single();
+    if (error || !file) throw new Error("File not found");
+    // RLS already restricts; admins handled separately via admin fns
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.storage.from("user-files").remove([file.storage_path]);
+    const { error: dErr } = await context.supabase.from("files").delete().eq("id", file.id);
+    if (dErr) throw new Error(dErr.message);
+    return { ok: true };
+  });
+
+export const changeMyPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { new_password: string }) =>
+    z.object({ new_password: z.string().min(8).max(128) }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(context.userId, { password: data.new_password });
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("profiles").update({ must_change_password: false }).eq("id", context.userId);
+    return { ok: true };
+  });
