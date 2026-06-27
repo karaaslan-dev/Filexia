@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, KeyRound, Trash2, ShieldCheck, ShieldOff, Save, Download } from "lucide-react";
+import { UserPlus, KeyRound, Trash2, ShieldCheck, ShieldOff, Save } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Yönetim — Vaultly" }] }),
