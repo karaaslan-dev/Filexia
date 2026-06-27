@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Giriş — Kasaport" }] }),
+  head: () => ({ meta: [{ title: "Giriş — Filexa" }] }),
   component: AuthPage,
 });
 
@@ -46,7 +46,7 @@ function AuthPage() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-6">
           <ShieldCheck className="size-7 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Kasaport</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Filexa</h1>
         </div>
         <Card>
           <CardHeader>
@@ -73,7 +73,7 @@ function AuthPage() {
             <div className="mt-4 pt-4 border-t">
               <Button type="button" variant="outline" className="w-full" onClick={() => setGuideOpen(true)}>
                 <BookOpen className="size-4 mr-2" />
-                İlk defa mı? Kullanım rehberini aç
+                Kullanım Kılavuzunu Görüntüle
               </Button>
             </div>
           </CardContent>
