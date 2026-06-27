@@ -14,16 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_settings: {
+        Row: {
+          allowed_mime_prefixes: string[]
+          default_quota_mb: number
+          id: number
+          max_file_size_mb: number
+          updated_at: string
+        }
+        Insert: {
+          allowed_mime_prefixes?: string[]
+          default_quota_mb?: number
+          id?: number
+          max_file_size_mb?: number
+          updated_at?: string
+        }
+        Update: {
+          allowed_mime_prefixes?: string[]
+          default_quota_mb?: number
+          id?: number
+          max_file_size_mb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      files: {
+        Row: {
+          created_at: string
+          id: string
+          mime_type: string | null
+          name: string
+          owner_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          name: string
+          owner_id: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          name?: string
+          owner_id?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          is_active: boolean
+          must_change_password: boolean
+          storage_quota_mb: number
+          storage_used_bytes: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id: string
+          is_active?: boolean
+          must_change_password?: boolean
+          storage_quota_mb?: number
+          storage_used_bytes?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          must_change_password?: boolean
+          storage_quota_mb?: number
+          storage_used_bytes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +266,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
