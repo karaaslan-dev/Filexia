@@ -129,12 +129,12 @@ function UsersTab() {
           is_admin: form.is_admin,
         },
       });
-      toast.success("Kullanıcı eklendi");
+      toast.success(t("ad.userAdded"));
       setOpen(false);
       setForm({ email: "", password: "", display_name: "", quota_mb: "", is_admin: false });
       refresh();
     } catch (e: any) {
-      toast.error("Eklenemedi", { description: e.message });
+      toast.error(t("ad.userAddFailed"), { description: e.message });
     }
   }
 
@@ -142,50 +142,50 @@ function UsersTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Kullanıcılar</CardTitle>
-          <CardDescription>{users.length} kayıtlı kullanıcı</CardDescription>
+          <CardTitle>{t("ad.usersTitle")}</CardTitle>
+          <CardDescription>{t("ad.usersCount", users.length)}</CardDescription>
         </div>
         <div className="flex gap-2 flex-wrap">
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
-          <FileSpreadsheet className="size-4 mr-2" /> Excel ile Toplu Ekle
+          <FileSpreadsheet className="size-4 mr-2" /> {t("ad.bulkExcel")}
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><UserPlus className="size-4 mr-2" /> Yeni Kullanıcı</Button>
+            <Button><UserPlus className="size-4 mr-2" /> {t("ad.newUser")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Kullanıcı Ekle</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("ad.addUser")}</DialogTitle></DialogHeader>
             <form onSubmit={onCreate} className="space-y-3">
-              <div><Label>E-posta</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div><Label>Geçici Şifre</Label><Input type="text" required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-              <div><Label>Görünen Ad</Label><Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></div>
-              <div><Label>Kota (MB) — boş bırakılırsa varsayılan</Label><Input type="number" min={1} value={form.quota_mb} onChange={(e) => setForm({ ...form, quota_mb: e.target.value })} /></div>
-              <div className="flex items-center gap-2"><Switch checked={form.is_admin} onCheckedChange={(v) => setForm({ ...form, is_admin: v })} /> <span>Yönetici yetkisi</span></div>
-              <DialogFooter><Button type="submit">Oluştur</Button></DialogFooter>
+              <div><Label>{t("ad.colEmail")}</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+              <div><Label>{t("ad.tempPw")}</Label><Input type="text" required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+              <div><Label>{t("setup.displayName")}</Label><Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></div>
+              <div><Label>{t("ad.quotaDefault")}</Label><Input type="number" min={1} value={form.quota_mb} onChange={(e) => setForm({ ...form, quota_mb: e.target.value })} /></div>
+              <div className="flex items-center gap-2"><Switch checked={form.is_admin} onCheckedChange={(v) => setForm({ ...form, is_admin: v })} /> <span>{t("ad.adminRole")}</span></div>
+              <DialogFooter><Button type="submit">{t("ad.create")}</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
         <Dialog open={bulkOpen} onOpenChange={(v) => { setBulkOpen(v); if (!v) setBulkResult(null); }}>
           <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>Excel ile Toplu Kullanıcı Ekle</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("ad.bulkTitle")}</DialogTitle></DialogHeader>
             <div className="space-y-3 text-sm">
               <p className="text-muted-foreground">
-                Excel/CSV sütunları: <code>email, password, display_name, quota_mb, is_admin</code>.
-                Şifreler en az 8 karakter olmalı.
+                {t("ad.bulkCols")} <code>email, password, display_name, quota_mb, is_admin</code>.
+                {" "}{t("ad.bulkPwHint")}
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={downloadTemplate}>
-                  <Download className="size-4 mr-2" /> Şablon indir (.xlsx)
+                  <Download className="size-4 mr-2" /> {t("ad.bulkTemplate")}
                 </Button>
                 <Button onClick={() => fileRef.current?.click()} disabled={bulkLoading}>
-                  <FileSpreadsheet className="size-4 mr-2" /> {bulkLoading ? "Yükleniyor…" : "Dosya seç"}
+                  <FileSpreadsheet className="size-4 mr-2" /> {bulkLoading ? t("ad.bulkLoading") : t("ad.bulkPick")}
                 </Button>
                 <input ref={fileRef} type="file" hidden accept=".xlsx,.xls,.csv" onChange={onBulkPick} />
               </div>
               {bulkResult && (
                 <div className="max-h-72 overflow-auto border rounded">
                   <table className="w-full text-xs">
-                    <thead className="bg-muted/50 text-left"><tr><th className="p-2">E-posta</th><th className="p-2">Durum</th></tr></thead>
+                    <thead className="bg-muted/50 text-left"><tr><th className="p-2">{t("ad.colEmail")}</th><th className="p-2">{t("ad.colStatus")}</th></tr></thead>
                     <tbody>
                       {bulkResult.map((r, i) => (
                         <tr key={i} className="border-t">
