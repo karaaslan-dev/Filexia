@@ -2,6 +2,36 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// VirusTotal v3: lookup file report by SHA-256.
+// Returns { found, stats, malicious, suspicious, harmless, undetected, permalink }.
+async function vtLookup(sha256: string) {
+  const key = process.env.VIRUSTOTAL_API_KEY;
+  if (!key) throw new Error("VirusTotal yapılandırılmamış");
+  const res = await fetch(`https://www.virustotal.com/api/v3/files/${sha256}`, {
+    headers: { "x-apikey": key, accept: "application/json" },
+  });
+  if (res.status === 404) return { found: false as const };
+  if (!res.ok) throw new Error(`VirusTotal hatası: ${res.status}`);
+  const json: any = await res.json();
+  const stats = json?.data?.attributes?.last_analysis_stats ?? {};
+  return {
+    found: true as const,
+    stats,
+    malicious: stats.malicious ?? 0,
+    suspicious: stats.suspicious ?? 0,
+    harmless: stats.harmless ?? 0,
+    undetected: stats.undetected ?? 0,
+    permalink: `https://www.virustotal.com/gui/file/${sha256}`,
+  };
+}
+
+export const checkVirusTotal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { sha256: string }) =>
+    z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/i) }).parse(d)
+  )
+  .handler(async ({ data }) => vtLookup(data.sha256.toLowerCase()));
+
 export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -32,13 +62,14 @@ export const listMyFiles = createServerFn({ method: "GET" })
 // delete the uploaded object so storage doesn't drift from the files table.
 export const registerFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { storage_path: string; name: string; size_bytes: number; mime_type: string; folder_id?: string | null }) =>
+  .inputValidator((d: { storage_path: string; name: string; size_bytes: number; mime_type: string; folder_id?: string | null; sha256: string }) =>
     z.object({
       storage_path: z.string().min(1).max(512),
       name: z.string().min(1).max(255),
       size_bytes: z.number().int().positive(),
       mime_type: z.string().max(255),
       folder_id: z.string().uuid().nullable().optional(),
+      sha256: z.string().regex(/^[a-f0-9]{64}$/i),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
@@ -51,6 +82,23 @@ export const registerFile = createServerFn({ method: "POST" })
 
     async function cleanup() {
       await supabaseAdmin.storage.from("user-files").remove([data.storage_path]);
+    }
+
+    // VirusTotal zorunlu doğrulama
+    let vt: any;
+    try {
+      vt = await vtLookup(data.sha256.toLowerCase());
+    } catch (e: any) {
+      await cleanup();
+      throw new Error(`VirusTotal doğrulanamadı: ${e.message}`);
+    }
+    if (!vt.found) {
+      await cleanup();
+      throw new Error("Bu dosya VirusTotal'da bulunamadı. Lütfen önce virustotal.com adresine yükleyin, ardından tekrar deneyin.");
+    }
+    if ((vt.malicious ?? 0) > 0 || (vt.suspicious ?? 0) > 1) {
+      await cleanup();
+      throw new Error(`Güvenlik riski: VirusTotal ${vt.malicious} kötü amaçlı / ${vt.suspicious} şüpheli sonuç bildirdi. Yükleme reddedildi.`);
     }
 
     const { data: settings } = await context.supabase.from("app_settings").select("max_file_size_mb, allowed_mime_prefixes").eq("id", 1).single();
@@ -90,6 +138,9 @@ export const registerFile = createServerFn({ method: "POST" })
         size_bytes: data.size_bytes,
         mime_type: data.mime_type,
         folder_id: data.folder_id ?? null,
+        sha256: data.sha256.toLowerCase(),
+        vt_stats: vt.stats ?? null,
+        vt_scanned_at: new Date().toISOString(),
       })
       .select("id")
       .single();
