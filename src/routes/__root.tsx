@@ -79,9 +79,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vaultly — Güvenli Dosya Sürücüsü" },
+      { title: "Kasaport — Güvenli Dosya Sürücüsü" },
       { name: "description", content: "Kapalı sistem, kotalı, gelişmiş bir dosya yükleme ve paylaşım sürücüsü." },
-      { property: "og:title", content: "Vaultly — Güvenli Dosya Sürücüsü" },
+      { property: "og:title", content: "Kasaport — Güvenli Dosya Sürücüsü" },
       { property: "og:description", content: "Kapalı sistem, kotalı, gelişmiş bir dosya yükleme ve paylaşım sürücüsü." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Ayarlar — Vaultly" }] }),
+  head: () => ({ meta: [{ title: "Ayarlar — Kasaport" }] }),
   component: SettingsPage,
 });
 

@@ -36,7 +36,7 @@ function AuthedLayout() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/drive" className="flex items-center gap-2 font-semibold">
             <ShieldCheck className="size-5 text-primary" />
-            Vaultly
+            Kasaport
           </Link>
           <nav className="flex items-center gap-1">
             <Button asChild variant="ghost" size="sm">
