@@ -493,6 +493,7 @@ function DrivePage() {
 function ShareDialog({
   file, onClose, createLink,
 }: { file: { id: string; name: string }; onClose: () => void; createLink: (p: { password?: string; expires_in_hours?: number | null; max_downloads?: number | null; require_auth?: boolean }) => Promise<{ token: string }>; }) {
+  const t = useT();
   const [usePassword, setUsePassword] = useState(false);
   const [password, setPassword] = useState("");
   const [useExpiry, setUseExpiry] = useState(true);
@@ -514,9 +515,9 @@ function ShareDialog({
       });
       const url = `${window.location.origin}/s/${token}`;
       setResultUrl(url);
-      toast.success("Paylaşım bağlantısı oluşturuldu");
+      toast.success(t("sd.created"));
     } catch (e: any) {
-      toast.error("Oluşturulamadı", { description: e.message });
+      toast.error(t("sd.createFailed"), { description: e.message });
     } finally { setBusy(false); }
   }
 
@@ -524,62 +525,62 @@ function ShareDialog({
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Paylaşım bağlantısı oluştur</DialogTitle>
+          <DialogTitle>{t("sd.title")}</DialogTitle>
           <DialogDescription className="truncate">{file.name}</DialogDescription>
         </DialogHeader>
         {resultUrl ? (
           <div className="space-y-3">
-            <Label>Bağlantı</Label>
+            <Label>{t("sd.link")}</Label>
             <div className="flex gap-2">
               <Input readOnly value={resultUrl} onFocus={(e) => e.currentTarget.select()} />
-              <Button onClick={() => { navigator.clipboard.writeText(resultUrl); toast.success("Kopyalandı"); }}>
+              <Button onClick={() => { navigator.clipboard.writeText(resultUrl); toast.success(t("common.copied")); }}>
                 <Copy className="size-4" />
               </Button>
               <Button variant="outline" onClick={() => window.open(resultUrl, "_blank")}>
                 <ExternalLink className="size-4" />
               </Button>
             </div>
-            <DialogFooter><Button onClick={onClose}>Kapat</Button></DialogFooter>
+            <DialogFooter><Button onClick={onClose}>{t("common.close")}</Button></DialogFooter>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <div><Label>Parola koruması</Label><p className="text-xs text-muted-foreground">İndirmek için parola gerekir.</p></div>
+              <div><Label>{t("sd.pwProt")}</Label><p className="text-xs text-muted-foreground">{t("sd.pwProtDesc")}</p></div>
               <Switch checked={usePassword} onCheckedChange={setUsePassword} />
             </div>
-            {usePassword && <Input type="text" placeholder="Parola (min 4 karakter)" value={password} onChange={(e) => setPassword(e.target.value)} minLength={4} />}
+            {usePassword && <Input type="text" placeholder={t("sd.pwInput")} value={password} onChange={(e) => setPassword(e.target.value)} minLength={4} />}
 
             <div className="flex items-center justify-between gap-3">
-              <div><Label>Son kullanma</Label><p className="text-xs text-muted-foreground">Belirtilen saat sonra geçersiz olur.</p></div>
+              <div><Label>{t("sd.expiry")}</Label><p className="text-xs text-muted-foreground">{t("sd.expiryDesc")}</p></div>
               <Switch checked={useExpiry} onCheckedChange={setUseExpiry} />
             </div>
             {useExpiry && (
               <div className="flex items-center gap-2">
                 <Input type="number" min={1} value={expiresHours} onChange={(e) => setExpiresHours(e.target.value)} className="w-32" />
-                <span className="text-sm text-muted-foreground">saat</span>
+                <span className="text-sm text-muted-foreground">{t("common.hours")}</span>
               </div>
             )}
 
             <div className="flex items-center justify-between gap-3">
-              <div><Label>İndirme limiti</Label><p className="text-xs text-muted-foreground">N kez indirildikten sonra kapanır.</p></div>
+              <div><Label>{t("sd.limit")}</Label><p className="text-xs text-muted-foreground">{t("sd.limitDesc")}</p></div>
               <Switch checked={useLimit} onCheckedChange={setUseLimit} />
             </div>
             {useLimit && (
               <div className="flex items-center gap-2">
                 <Input type="number" min={1} value={maxDownloads} onChange={(e) => setMaxDownloads(e.target.value)} className="w-32" />
-                <span className="text-sm text-muted-foreground">indirme</span>
+                <span className="text-sm text-muted-foreground">{t("common.downloads")}</span>
               </div>
             )}
 
             <div className="flex items-center justify-between gap-3">
-              <div><Label>Yalnız giriş yapanlar</Label><p className="text-xs text-muted-foreground">Sisteme kayıtlı kullanıcılar erişebilir.</p></div>
+              <div><Label>{t("sd.authOnly")}</Label><p className="text-xs text-muted-foreground">{t("sd.authOnlyDesc")}</p></div>
               <Switch checked={requireAuth} onCheckedChange={setRequireAuth} />
             </div>
 
             <DialogFooter>
-              <Button variant="ghost" onClick={onClose}>İptal</Button>
+              <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>
               <Button onClick={onCreate} disabled={busy || (usePassword && password.length < 4)}>
-                {busy ? "Oluşturuluyor…" : "Bağlantı Oluştur"}
+                {busy ? t("sd.creating") : t("sd.createBtn")}
               </Button>
             </DialogFooter>
           </div>
@@ -593,6 +594,8 @@ function MyLinksDialog({
   open, onOpenChange, fetchLinks, revoke, remove,
 }: { open: boolean; onOpenChange: (v: boolean) => void; fetchLinks: () => Promise<any[]>; revoke: (id: string) => Promise<any>; remove: (id: string) => Promise<any>; }) {
   const qc = useQueryClient();
+  const t = useT();
+  const { lang } = useLang();
   const { data: links = [], refetch } = useQuery({
     queryKey: ["share-links"],
     queryFn: () => fetchLinks(),
@@ -603,12 +606,12 @@ function MyLinksDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Paylaşımlarım</DialogTitle>
-          <DialogDescription>{links.length} bağlantı</DialogDescription>
+          <DialogTitle>{t("ml.title")}</DialogTitle>
+          <DialogDescription>{t("ml.count", links.length)}</DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6 divide-y">
           {links.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">Henüz paylaşım yok.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">{t("ml.empty")}</p>
           ) : links.map((l: any) => {
             const url = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${l.token}`;
             const expired = l.expires_at && new Date(l.expires_at) < new Date();
@@ -616,28 +619,28 @@ function MyLinksDialog({
             return (
               <div key={l.id} className="py-3 space-y-1">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="font-medium truncate flex-1">{l.files?.name ?? "Dosya"}</div>
-                  {l.is_revoked && <span className="text-xs text-destructive">İptal</span>}
-                  {!l.is_revoked && expired && <span className="text-xs text-destructive">Süresi doldu</span>}
-                  {!l.is_revoked && !expired && exhausted && <span className="text-xs text-destructive">Limit doldu</span>}
+                  <div className="font-medium truncate flex-1">{l.files?.name ?? t("ml.file")}</div>
+                  {l.is_revoked && <span className="text-xs text-destructive">{t("ml.revoked")}</span>}
+                  {!l.is_revoked && expired && <span className="text-xs text-destructive">{t("ml.expired")}</span>}
+                  {!l.is_revoked && !expired && exhausted && <span className="text-xs text-destructive">{t("ml.exhausted")}</span>}
                 </div>
                 <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
-                  {l.has_password && <span>🔒 Parolalı</span>}
-                  {l.require_auth && <span>👤 Üyeler</span>}
-                  {l.expires_at && <span>⏱ {new Date(l.expires_at).toLocaleString("tr-TR")}</span>}
+                  {l.has_password && <span>{t("ml.pw")}</span>}
+                  {l.require_auth && <span>{t("ml.members")}</span>}
+                  {l.expires_at && <span>⏱ {new Date(l.expires_at).toLocaleString(lang === "tr" ? "tr-TR" : "en-US")}</span>}
                   <span>↓ {l.download_count}{l.max_downloads ? ` / ${l.max_downloads}` : ""}</span>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Input readOnly value={url} className="h-8 text-xs flex-1 min-w-0" onFocus={(e) => e.currentTarget.select()} />
-                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success("Kopyalandı"); }}>
+                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success(t("common.copied")); }}>
                     <Copy className="size-4" />
                   </Button>
                   {!l.is_revoked && (
-                    <Button size="sm" variant="outline" onClick={async () => { await revoke(l.id); toast.success("İptal edildi"); refetch(); qc.invalidateQueries({ queryKey: ["share-links"] }); }}>
+                    <Button size="sm" variant="outline" onClick={async () => { await revoke(l.id); toast.success(t("ml.cancelled")); refetch(); qc.invalidateQueries({ queryKey: ["share-links"] }); }}>
                       <Ban className="size-4" />
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={async () => { if (!confirm("Bağlantı silinsin mi?")) return; await remove(l.id); toast.success("Silindi"); refetch(); }}>
+                  <Button size="sm" variant="ghost" onClick={async () => { if (!confirm(t("ml.revokeConfirm"))) return; await remove(l.id); toast.success(t("common.deleted")); refetch(); }}>
                     <Trash2 className="size-4 text-destructive" />
                   </Button>
                 </div>
