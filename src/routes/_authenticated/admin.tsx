@@ -55,6 +55,7 @@ function AdminPage() {
 
 function UsersTab() {
   const qc = useQueryClient();
+  const t = useT();
   const fetchUsers = useServerFn(listUsers);
   const create = useServerFn(createUser);
   const setQuota = useServerFn(updateUserQuota);
@@ -104,14 +105,14 @@ function UsersTab() {
         quota_mb: r.quota_mb || r.kota ? Number(r.quota_mb ?? r.kota) : undefined,
         is_admin: String(r.is_admin ?? r.admin ?? "").toString().toLowerCase().match(/^(true|1|evet|yes)$/) ? true : false,
       })).filter((r) => r.email && r.password.length >= 8);
-      if (!cleaned.length) { toast.error("Geçerli satır bulunamadı"); setBulkLoading(false); return; }
+      if (!cleaned.length) { toast.error(t("ad.bulkNoRows")); setBulkLoading(false); return; }
       const { results } = await bulkCreate({ data: { rows: cleaned } });
       setBulkResult(results);
       const ok = results.filter((r) => r.ok).length;
-      toast.success(`${ok}/${results.length} kullanıcı eklendi`);
+      toast.success(t("ad.bulkOk", ok, results.length));
       refresh();
     } catch (err: any) {
-      toast.error("Toplu ekleme başarısız", { description: err.message });
+      toast.error(t("ad.bulkFailed"), { description: err.message });
     } finally { setBulkLoading(false); }
   }
 
