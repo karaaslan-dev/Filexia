@@ -302,6 +302,7 @@ function QuotaCell({ userId, value, onSave }: { userId: string; value: number; o
 
 function FilesTab() {
   const qc = useQueryClient();
+  const t = useT();
   const fetchAll = useServerFn(listAllFiles);
   const del = useServerFn(deleteFile);
   const { data: files = [] } = useQuery({ queryKey: ["admin-files"], queryFn: () => fetchAll() });
@@ -309,14 +310,14 @@ function FilesTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tüm Dosyalar</CardTitle>
-        <CardDescription>{files.length} dosya (son 500)</CardDescription>
+        <CardTitle>{t("ad.allFiles")}</CardTitle>
+        <CardDescription>{t("ad.allFilesCount", files.length)}</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
-              <tr><th className="p-3">Dosya</th><th className="p-3">Sahip</th><th className="p-3">Boyut</th><th className="p-3">Tür</th><th className="p-3 text-right">İşlem</th></tr>
+              <tr><th className="p-3">{t("ad.colFile")}</th><th className="p-3">{t("ad.colOwner")}</th><th className="p-3">{t("ad.colSize")}</th><th className="p-3">{t("ad.colType")}</th><th className="p-3 text-right">{t("ad.colAction")}</th></tr>
             </thead>
             <tbody>
               {files.map((f: any) => (
@@ -327,8 +328,8 @@ function FilesTab() {
                   <td className="p-3 text-xs">{f.mime_type}</td>
                   <td className="p-3 text-right">
                     <Button size="sm" variant="ghost" onClick={async () => {
-                      if (!confirm(`"${f.name}" silinsin mi?`)) return;
-                      try { await del({ data: { file_id: f.id } }); toast.success("Silindi"); qc.invalidateQueries({ queryKey: ["admin-files"] }); }
+                      if (!confirm(t("ad.deleteFileConfirm", f.name))) return;
+                      try { await del({ data: { file_id: f.id } }); toast.success(t("common.deleted")); qc.invalidateQueries({ queryKey: ["admin-files"] }); }
                       catch (e: any) { toast.error(e.message); }
                     }}>
                       <Trash2 className="size-4 text-destructive" />
@@ -345,6 +346,7 @@ function FilesTab() {
 }
 
 function SettingsTab() {
+  const t = useT();
   const fetchSettings = useServerFn(getSettings);
   const save = useServerFn(updateSettings);
   const { data, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => fetchSettings() });
@@ -368,7 +370,7 @@ function SettingsTab() {
           allowed_mime_prefixes: mimes.split(",").map((s) => s.trim()).filter(Boolean),
         },
       });
-      toast.success("Ayarlar kaydedildi");
+      toast.success(t("common.saved"));
       refetch();
     } catch (e: any) { toast.error(e.message); }
   }
@@ -376,50 +378,53 @@ function SettingsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sistem Ayarları</CardTitle>
-        <CardDescription>Yeni kullanıcıların varsayılan kotası ve dosya kısıtlamaları</CardDescription>
+        <CardTitle>{t("ad.sysTitle")}</CardTitle>
+        <CardDescription>{t("ad.sysDesc")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 max-w-md">
-        <div className="space-y-2"><Label>Varsayılan Kota (MB)</Label><Input type="number" value={defaultQuota} onChange={(e) => setDefaultQuota(e.target.value)} /></div>
-        <div className="space-y-2"><Label>Maksimum Dosya Boyutu (MB)</Label><Input type="number" value={maxFile} onChange={(e) => setMaxFile(e.target.value)} /></div>
+        <div className="space-y-2"><Label>{t("ad.defaultQuota")}</Label><Input type="number" value={defaultQuota} onChange={(e) => setDefaultQuota(e.target.value)} /></div>
+        <div className="space-y-2"><Label>{t("ad.maxFile")}</Label><Input type="number" value={maxFile} onChange={(e) => setMaxFile(e.target.value)} /></div>
         <div className="space-y-2">
-          <Label>İzin verilen MIME önekleri (virgülle ayrılmış, boş = tümü)</Label>
+          <Label>{t("ad.mimePrefixes")}</Label>
           <Input placeholder="image/, application/pdf" value={mimes} onChange={(e) => setMimes(e.target.value)} />
         </div>
-        <Button onClick={onSave}><Save className="size-4 mr-2" /> Kaydet</Button>
+        <Button onClick={onSave}><Save className="size-4 mr-2" /> {t("common.save")}</Button>
       </CardContent>
     </Card>
   );
 }
 
 function AuditTab() {
+  const t = useT();
+  const { lang } = useLang();
+  const dateLocale = lang === "tr" ? tr : enUS;
   const fetchLogs = useServerFn(listAuditLogs);
   const { data: logs = [], refetch } = useQuery({ queryKey: ["audit"], queryFn: () => fetchLogs({ data: { limit: 300 } }) });
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="flex items-center gap-2"><ScrollText className="size-5" /> Denetim Kayıtları</CardTitle>
-          <CardDescription>Son {logs.length} işlem</CardDescription>
+          <CardTitle className="flex items-center gap-2"><ScrollText className="size-5" /> {t("ad.auditTitle")}</CardTitle>
+          <CardDescription>{t("ad.auditCount", logs.length)}</CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={() => refetch()}>Yenile</Button>
+        <Button size="sm" variant="outline" onClick={() => refetch()}>{t("common.refresh")}</Button>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>
-                <th className="p-3">Zaman</th>
-                <th className="p-3">Kullanıcı</th>
-                <th className="p-3">İşlem</th>
-                <th className="p-3">Kaynak</th>
-                <th className="p-3">Detay</th>
+                <th className="p-3">{t("ad.colTime")}</th>
+                <th className="p-3">{t("ad.colUser")}</th>
+                <th className="p-3">{t("ad.colAction2")}</th>
+                <th className="p-3">{t("ad.colResource")}</th>
+                <th className="p-3">{t("ad.colDetail")}</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((l: any) => (
                 <tr key={l.id} className="border-t align-top">
-                  <td className="p-3 text-xs whitespace-nowrap">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true, locale: tr })}</td>
+                  <td className="p-3 text-xs whitespace-nowrap">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true, locale: dateLocale })}</td>
                   <td className="p-3 text-xs font-mono">{l.actor_email ?? l.actor_id ?? "—"}</td>
                   <td className="p-3"><Badge variant="secondary">{l.action}</Badge></td>
                   <td className="p-3 text-xs">{l.resource_type ?? "—"}{l.resource_id ? ` · ${String(l.resource_id).slice(0, 8)}` : ""}</td>
@@ -428,7 +433,7 @@ function AuditTab() {
                   </td>
                 </tr>
               ))}
-              {!logs.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Henüz kayıt yok.</td></tr>}
+              {!logs.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{t("ad.auditEmpty")}</td></tr>}
             </tbody>
           </table>
         </div>
