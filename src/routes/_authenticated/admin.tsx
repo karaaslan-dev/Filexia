@@ -226,7 +226,7 @@ function FilesTab() {
               {files.map((f: any) => (
                 <tr key={f.id} className="border-t">
                   <td className="p-3 max-w-xs truncate">{f.name}</td>
-                  <td className="p-3 text-xs text-muted-foreground">{f.profiles?.email}</td>
+                  <td className="p-3 text-xs text-muted-foreground">{f.profiles?.email ?? "—"}</td>
                   <td className="p-3">{fmtBytes(f.size_bytes)}</td>
                   <td className="p-3 text-xs">{f.mime_type}</td>
                   <td className="p-3 text-right">
