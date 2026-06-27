@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { logAudit } from "./audit.functions";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -57,6 +58,11 @@ export const createUser = createServerFn({ method: "POST" })
     if (data.is_admin) {
       await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "admin" });
     }
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "user.create", resourceType: "user", resourceId: created.user.id,
+      metadata: { email: data.email, is_admin: !!data.is_admin, quota_mb: data.quota_mb ?? null },
+    });
     return { id: created.user.id };
   });
 
@@ -86,6 +92,11 @@ export const setUserActive = createServerFn({ method: "POST" })
     await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       ban_duration: data.is_active ? "none" : "876000h",
     } as any);
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: data.is_active ? "user.activate" : "user.deactivate",
+      resourceType: "user", resourceId: data.user_id,
+    });
     return { ok: true };
   });
 
@@ -103,6 +114,11 @@ export const setUserAdmin = createServerFn({ method: "POST" })
       if (data.user_id === context.userId) throw new Error("Cannot remove your own admin role");
       await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id).eq("role", "admin");
     }
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: data.make_admin ? "user.grant_admin" : "user.revoke_admin",
+      resourceType: "user", resourceId: data.user_id,
+    });
     return { ok: true };
   });
 
@@ -117,6 +133,10 @@ export const resetUserPassword = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { password: data.new_password });
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("profiles").update({ must_change_password: true }).eq("id", data.user_id);
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "user.reset_password", resourceType: "user", resourceId: data.user_id,
+    });
     return { ok: true };
   });
 
@@ -134,6 +154,10 @@ export const deleteUser = createServerFn({ method: "POST" })
     }
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "user.delete", resourceType: "user", resourceId: data.user_id,
+    });
     return { ok: true };
   });
 
@@ -159,6 +183,10 @@ export const updateSettings = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("app_settings").update(data).eq("id", 1);
     if (error) throw new Error(error.message);
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "settings.update", resourceType: "app_settings", metadata: data,
+    });
     return { ok: true };
   });
 
@@ -173,4 +201,44 @@ export const listAllFiles = createServerFn({ method: "GET" })
       .limit(500);
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+// Bulk user creation. Accepts an array of rows parsed client-side from Excel/CSV.
+export const bulkCreateUsers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { rows: Array<{ email: string; password: string; display_name?: string; quota_mb?: number; is_admin?: boolean }> }) =>
+    z.object({
+      rows: z.array(z.object({
+        email: z.string().email().max(255),
+        password: z.string().min(8).max(128),
+        display_name: z.string().trim().max(80).optional(),
+        quota_mb: z.number().int().positive().max(1024 * 1024).optional(),
+        is_admin: z.boolean().optional(),
+      })).min(1).max(500),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const results: Array<{ email: string; ok: boolean; error?: string; id?: string }> = [];
+    for (const r of data.rows) {
+      try {
+        const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+          email: r.email, password: r.password, email_confirm: true,
+          user_metadata: { display_name: r.display_name ?? r.email.split("@")[0], must_change_password: true },
+        });
+        if (error || !created.user) { results.push({ email: r.email, ok: false, error: error?.message ?? "unknown" }); continue; }
+        if (r.quota_mb) await supabaseAdmin.from("profiles").update({ storage_quota_mb: r.quota_mb }).eq("id", created.user.id);
+        if (r.is_admin) await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "admin" });
+        results.push({ email: r.email, ok: true, id: created.user.id });
+      } catch (e: any) {
+        results.push({ email: r.email, ok: false, error: e.message ?? String(e) });
+      }
+    }
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "user.bulk_create",
+      metadata: { total: data.rows.length, ok: results.filter((x) => x.ok).length, fail: results.filter((x) => !x.ok).length },
+    });
+    return { results };
   });

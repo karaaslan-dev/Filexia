@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   listUsers, createUser, updateUserQuota, setUserActive, setUserAdmin,
   resetUserPassword, deleteUser, getSettings, updateSettings, listAllFiles,
+  bulkCreateUsers,
 } from "@/lib/admin.functions";
 import { deleteFile } from "@/lib/files.functions";
+import { listAuditLogs } from "@/lib/audit.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { UserPlus, KeyRound, Trash2, ShieldCheck, ShieldOff, Save } from "lucide-react";
+import { UserPlus, KeyRound, Trash2, ShieldCheck, ShieldOff, Save, FileSpreadsheet, Download, ScrollText } from "lucide-react";
+import * as XLSX from "xlsx";
+import { formatDistanceToNow } from "date-fns";
+import { tr } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Yönetim — Vaultly" }] }),
@@ -36,10 +41,12 @@ function AdminPage() {
         <TabsTrigger value="users">Kullanıcılar</TabsTrigger>
         <TabsTrigger value="files">Tüm Dosyalar</TabsTrigger>
         <TabsTrigger value="settings">Sistem Ayarları</TabsTrigger>
+        <TabsTrigger value="audit">Denetim Kayıtları</TabsTrigger>
       </TabsList>
       <TabsContent value="users" className="mt-6"><UsersTab /></TabsContent>
       <TabsContent value="files" className="mt-6"><FilesTab /></TabsContent>
       <TabsContent value="settings" className="mt-6"><SettingsTab /></TabsContent>
+      <TabsContent value="audit" className="mt-6"><AuditTab /></TabsContent>
     </Tabs>
   );
 }
@@ -60,6 +67,52 @@ function UsersTab() {
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", display_name: "", quota_mb: "", is_admin: false });
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkResult, setBulkResult] = useState<Array<{ email: string; ok: boolean; error?: string }> | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const bulkCreate = useServerFn(bulkCreateUsers);
+
+  function downloadTemplate() {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["email", "password", "display_name", "quota_mb", "is_admin"],
+      ["ogrenci1@okul.edu.tr", "Gecici1234", "Öğrenci Bir", 10240, false],
+      ["ogrenci2@okul.edu.tr", "Gecici1234", "Öğrenci İki", 5120, false],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Kullanicilar");
+    XLSX.writeFile(wb, "kullanici-sablonu.xlsx");
+  }
+
+  async function onBulkPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      setBulkLoading(true);
+      setBulkResult(null);
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
+      const cleaned = rows.map((r) => ({
+        email: String(r.email ?? r.Email ?? "").trim(),
+        password: String(r.password ?? r.Password ?? r.sifre ?? r.Sifre ?? "").trim(),
+        display_name: String(r.display_name ?? r.ad ?? r.Ad ?? "").trim() || undefined,
+        quota_mb: r.quota_mb || r.kota ? Number(r.quota_mb ?? r.kota) : undefined,
+        is_admin: String(r.is_admin ?? r.admin ?? "").toString().toLowerCase().match(/^(true|1|evet|yes)$/) ? true : false,
+      })).filter((r) => r.email && r.password.length >= 8);
+      if (!cleaned.length) { toast.error("Geçerli satır bulunamadı"); setBulkLoading(false); return; }
+      const { results } = await bulkCreate({ data: { rows: cleaned } });
+      setBulkResult(results);
+      const ok = results.filter((r) => r.ok).length;
+      toast.success(`${ok}/${results.length} kullanıcı eklendi`);
+      refresh();
+    } catch (err: any) {
+      toast.error("Toplu ekleme başarısız", { description: err.message });
+    } finally { setBulkLoading(false); }
+  }
+
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -89,6 +142,10 @@ function UsersTab() {
           <CardTitle>Kullanıcılar</CardTitle>
           <CardDescription>{users.length} kayıtlı kullanıcı</CardDescription>
         </div>
+        <div className="flex gap-2 flex-wrap">
+        <Button variant="outline" onClick={() => setBulkOpen(true)}>
+          <FileSpreadsheet className="size-4 mr-2" /> Excel ile Toplu Ekle
+        </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><UserPlus className="size-4 mr-2" /> Yeni Kullanıcı</Button>
@@ -105,6 +162,42 @@ function UsersTab() {
             </form>
           </DialogContent>
         </Dialog>
+        <Dialog open={bulkOpen} onOpenChange={(v) => { setBulkOpen(v); if (!v) setBulkResult(null); }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader><DialogTitle>Excel ile Toplu Kullanıcı Ekle</DialogTitle></DialogHeader>
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Excel/CSV sütunları: <code>email, password, display_name, quota_mb, is_admin</code>.
+                Şifreler en az 8 karakter olmalı.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" onClick={downloadTemplate}>
+                  <Download className="size-4 mr-2" /> Şablon indir (.xlsx)
+                </Button>
+                <Button onClick={() => fileRef.current?.click()} disabled={bulkLoading}>
+                  <FileSpreadsheet className="size-4 mr-2" /> {bulkLoading ? "Yükleniyor…" : "Dosya seç"}
+                </Button>
+                <input ref={fileRef} type="file" hidden accept=".xlsx,.xls,.csv" onChange={onBulkPick} />
+              </div>
+              {bulkResult && (
+                <div className="max-h-72 overflow-auto border rounded">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50 text-left"><tr><th className="p-2">E-posta</th><th className="p-2">Durum</th></tr></thead>
+                    <tbody>
+                      {bulkResult.map((r, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="p-2 font-mono">{r.email}</td>
+                          <td className="p-2">{r.ok ? <Badge>OK</Badge> : <span className="text-destructive">{r.error}</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -291,6 +384,51 @@ function SettingsTab() {
           <Input placeholder="image/, application/pdf" value={mimes} onChange={(e) => setMimes(e.target.value)} />
         </div>
         <Button onClick={onSave}><Save className="size-4 mr-2" /> Kaydet</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AuditTab() {
+  const fetchLogs = useServerFn(listAuditLogs);
+  const { data: logs = [], refetch } = useQuery({ queryKey: ["audit"], queryFn: () => fetchLogs({ data: { limit: 300 } }) });
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2"><ScrollText className="size-5" /> Denetim Kayıtları</CardTitle>
+          <CardDescription>Son {logs.length} işlem</CardDescription>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => refetch()}>Yenile</Button>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left">
+              <tr>
+                <th className="p-3">Zaman</th>
+                <th className="p-3">Kullanıcı</th>
+                <th className="p-3">İşlem</th>
+                <th className="p-3">Kaynak</th>
+                <th className="p-3">Detay</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l: any) => (
+                <tr key={l.id} className="border-t align-top">
+                  <td className="p-3 text-xs whitespace-nowrap">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true, locale: tr })}</td>
+                  <td className="p-3 text-xs font-mono">{l.actor_email ?? l.actor_id ?? "—"}</td>
+                  <td className="p-3"><Badge variant="secondary">{l.action}</Badge></td>
+                  <td className="p-3 text-xs">{l.resource_type ?? "—"}{l.resource_id ? ` · ${String(l.resource_id).slice(0, 8)}` : ""}</td>
+                  <td className="p-3 text-xs text-muted-foreground max-w-md truncate">
+                    {l.metadata ? JSON.stringify(l.metadata) : ""}
+                  </td>
+                </tr>
+              ))}
+              {!logs.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Henüz kayıt yok.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );

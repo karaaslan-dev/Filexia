@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { logAudit } from "./audit.functions";
 
 // VirusTotal v3: lookup file report by SHA-256.
 // Returns { found, stats, malicious, suspicious, harmless, undetected, permalink }.
@@ -148,6 +149,11 @@ export const registerFile = createServerFn({ method: "POST" })
       await cleanup();
       throw new Error(error.message);
     }
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "file.upload", resourceType: "file", resourceId: inserted.id,
+      metadata: { name: data.name, size: data.size_bytes, mime: data.mime_type, vt: vt.stats ?? null },
+    });
     return { id: inserted.id };
   });
 
@@ -165,7 +171,25 @@ export const getDownloadUrl = createServerFn({ method: "POST" })
       .from("user-files")
       .createSignedUrl(file.storage_path, 60 * 5, { download: file.name });
     if (sErr) throw new Error(sErr.message);
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "file.download", resourceType: "file", resourceId: data.file_id, metadata: { name: file.name },
+    });
     return { url: signed.signedUrl };
+  });
+
+// Inline preview URL (no forced download) for PDF/image/video viewers.
+export const getPreviewUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { file_id: string }) => z.object({ file_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: file, error } = await context.supabase
+      .from("files").select("storage_path, name, mime_type").eq("id", data.file_id).single();
+    if (error || !file) throw new Error("File not found");
+    const { data: signed, error: sErr } = await context.supabase.storage
+      .from("user-files").createSignedUrl(file.storage_path, 60 * 10);
+    if (sErr) throw new Error(sErr.message);
+    return { url: signed.signedUrl, name: file.name, mime_type: file.mime_type };
   });
 
 export const deleteFile = createServerFn({ method: "POST" })
@@ -183,6 +207,10 @@ export const deleteFile = createServerFn({ method: "POST" })
     await supabaseAdmin.storage.from("user-files").remove([file.storage_path]);
     const { error: dErr } = await context.supabase.from("files").delete().eq("id", file.id);
     if (dErr) throw new Error(dErr.message);
+    await logAudit({
+      actorId: context.userId, actorEmail: context.claims?.email,
+      action: "file.delete", resourceType: "file", resourceId: file.id,
+    });
     return { ok: true };
   });
 
