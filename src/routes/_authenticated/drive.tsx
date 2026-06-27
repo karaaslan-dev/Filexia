@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { listMyFiles, registerFile, deleteFile, getDownloadUrl, getMyProfile, checkVirusTotal } from "@/lib/files.functions";
+import { listMyFiles, registerFile, deleteFile, getDownloadUrl, getMyProfile, checkVirusTotal, getPreviewUrl } from "@/lib/files.functions";
 import {
   listMyFolders, createFolder, renameFolder, deleteFolder,
   bulkDeleteFiles, getBulkDownloadUrls,
@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Upload, Download, Trash2, FileIcon, Search, HardDrive, FolderPlus,
-  Folder, ChevronRight, Home, Pencil, X, Archive,
+  Folder, ChevronRight, Home, Pencil, X, Archive, Eye,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -52,6 +52,7 @@ function DrivePage() {
   const removeOne = useServerFn(deleteFile);
   const downloadUrl = useServerFn(getDownloadUrl);
   const vtCheck = useServerFn(checkVirusTotal);
+  const previewUrl = useServerFn(getPreviewUrl);
   const mkFolder = useServerFn(createFolder);
   const renameFolderFn = useServerFn(renameFolder);
   const rmFolder = useServerFn(deleteFolder);
@@ -75,6 +76,7 @@ function DrivePage() {
   const [zipping, setZipping] = useState(false);
   const [shareFor, setShareFor] = useState<{ id: string; name: string } | null>(null);
   const [linksOpen, setLinksOpen] = useState(false);
+  const [preview, setPreview] = useState<{ url: string; name: string; mime: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const profile = me?.profile;
@@ -196,6 +198,18 @@ function DrivePage() {
       const { url } = await downloadUrl({ data: { file_id: id } });
       window.open(url, "_blank");
     } catch (e: any) { toast.error("İndirme bağlantısı alınamadı", { description: e.message }); }
+  }
+
+  function isPreviewable(mime: string) {
+    return mime?.startsWith("image/") || mime?.startsWith("video/") || mime?.startsWith("audio/") || mime === "application/pdf" || mime?.startsWith("text/");
+  }
+
+  async function onPreview(id: string, mime: string) {
+    if (!isPreviewable(mime)) { toast.info("Bu dosya türü önizlenemez"); return; }
+    try {
+      const r: any = await previewUrl({ data: { file_id: id } });
+      setPreview({ url: r.url, name: r.name, mime: r.mime_type });
+    } catch (e: any) { toast.error("Önizleme alınamadı", { description: e.message }); }
   }
 
   async function onBulkDelete() {
@@ -389,6 +403,11 @@ function DrivePage() {
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    {isPreviewable(f.mime_type) && (
+                      <Button size="sm" variant="ghost" title="Önizle" onClick={() => onPreview(f.id, f.mime_type)}>
+                        <Eye className="size-4" />
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => onDownload(f.id)}><Download className="size-4" /></Button>
                     <Button size="sm" variant="ghost" title="Paylaş" onClick={() => setShareFor({ id: f.id, name: f.name })}>
                       <Share2 className="size-4" />
