@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Share2, Copy, Ban, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/drive")({
-  head: () => ({ meta: [{ title: "Dosyalarım — Kasaport" }] }),
+  head: () => ({ meta: [{ title: "Dosyalarım — Filexa" }] }),
   component: DrivePage,
 });
 
