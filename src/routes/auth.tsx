@@ -52,7 +52,7 @@ function AuthPage() {
           <CardHeader>
             <CardTitle>Hesabınıza giriş yapın</CardTitle>
             <CardDescription>
-              Bu kapalı bir sistemdir. Hesabınız yoksa lütfen yöneticinizle iletişime geçin.
+              Bu sistem kullanıcıların projelerini yükleyebilmeleri için geliştirilmiştir.
             </CardDescription>
           </CardHeader>
           <CardContent>
