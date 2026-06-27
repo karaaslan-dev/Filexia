@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Download, Lock, LogIn, ShieldCheck, FileIcon } from "lucide-react";
 
 export const Route = createFileRoute("/s/$token")({
-  head: () => ({ meta: [{ title: "Paylaşılan dosya — Vaultly" }] }),
+  head: () => ({ meta: [{ title: "Paylaşılan dosya — Kasaport" }] }),
   component: SharePage,
 });
 
@@ -51,7 +51,7 @@ function SharePage() {
       <main className="flex-1 grid place-items-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ShieldCheck className="size-5 text-primary" /> Vaultly Paylaşımı</CardTitle>
+            <CardTitle className="flex items-center gap-2"><ShieldCheck className="size-5 text-primary" /> Kasaport Paylaşımı</CardTitle>
             <CardDescription>Aşağıdaki dosyayı güvenli şekilde indirebilirsiniz.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
