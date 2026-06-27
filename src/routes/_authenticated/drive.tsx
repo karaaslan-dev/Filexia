@@ -196,7 +196,15 @@ function DrivePage() {
   async function onDownload(id: string) {
     try {
       const { url } = await downloadUrl({ data: { file_id: id } });
-      window.open(url, "_blank");
+      // Use an anchor click to avoid Chrome's popup blocker for async window.open
+      const a = document.createElement("a");
+      a.href = url;
+      a.rel = "noopener";
+      a.target = "_blank";
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (e: any) { toast.error("İndirme bağlantısı alınamadı", { description: e.message }); }
   }
 
