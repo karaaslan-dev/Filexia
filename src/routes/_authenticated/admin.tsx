@@ -389,3 +389,48 @@ function SettingsTab() {
     </Card>
   );
 }
+
+function AuditTab() {
+  const fetchLogs = useServerFn(listAuditLogs);
+  const { data: logs = [], refetch } = useQuery({ queryKey: ["audit"], queryFn: () => fetchLogs({ data: { limit: 300 } }) });
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2"><ScrollText className="size-5" /> Denetim Kayıtları</CardTitle>
+          <CardDescription>Son {logs.length} işlem</CardDescription>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => refetch()}>Yenile</Button>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left">
+              <tr>
+                <th className="p-3">Zaman</th>
+                <th className="p-3">Kullanıcı</th>
+                <th className="p-3">İşlem</th>
+                <th className="p-3">Kaynak</th>
+                <th className="p-3">Detay</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l: any) => (
+                <tr key={l.id} className="border-t align-top">
+                  <td className="p-3 text-xs whitespace-nowrap">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true, locale: tr })}</td>
+                  <td className="p-3 text-xs font-mono">{l.actor_email ?? l.actor_id ?? "—"}</td>
+                  <td className="p-3"><Badge variant="secondary">{l.action}</Badge></td>
+                  <td className="p-3 text-xs">{l.resource_type ?? "—"}{l.resource_id ? ` · ${String(l.resource_id).slice(0, 8)}` : ""}</td>
+                  <td className="p-3 text-xs text-muted-foreground max-w-md truncate">
+                    {l.metadata ? JSON.stringify(l.metadata) : ""}
+                  </td>
+                </tr>
+              ))}
+              {!logs.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Henüz kayıt yok.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
