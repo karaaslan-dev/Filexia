@@ -443,6 +443,34 @@ function DrivePage() {
         revoke={(id) => revokeLink({ data: { id } })}
         remove={(id) => delLink({ data: { id } })}
       />
+
+      <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="truncate pr-8">{preview?.name}</DialogTitle>
+            <DialogDescription>{preview?.mime}</DialogDescription>
+          </DialogHeader>
+          {preview && (
+            <div className="w-full bg-muted/30 rounded overflow-hidden">
+              {preview.mime.startsWith("image/") && (
+                <img src={preview.url} alt={preview.name} className="max-h-[70vh] w-full object-contain" />
+              )}
+              {preview.mime === "application/pdf" && (
+                <iframe src={preview.url} className="w-full h-[70vh]" title={preview.name} />
+              )}
+              {preview.mime.startsWith("video/") && (
+                <video src={preview.url} controls className="w-full max-h-[70vh]" />
+              )}
+              {preview.mime.startsWith("audio/") && (
+                <audio src={preview.url} controls className="w-full p-6" />
+              )}
+              {preview.mime.startsWith("text/") && (
+                <iframe src={preview.url} className="w-full h-[70vh] bg-background" title={preview.name} />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
