@@ -21,7 +21,8 @@ import { toast } from "sonner";
 import { UserPlus, KeyRound, Trash2, ShieldCheck, ShieldOff, Save, FileSpreadsheet, Download, ScrollText } from "lucide-react";
 import * as XLSX from "xlsx";
 import { formatDistanceToNow } from "date-fns";
-import { tr } from "date-fns/locale";
+import { tr, enUS } from "date-fns/locale";
+import { useT, useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Yönetim — Filexa" }] }),
@@ -35,13 +36,14 @@ function fmtBytes(b: number) {
 }
 
 function AdminPage() {
+  const t = useT();
   return (
     <Tabs defaultValue="users">
       <TabsList>
-        <TabsTrigger value="users">Kullanıcılar</TabsTrigger>
-        <TabsTrigger value="files">Tüm Dosyalar</TabsTrigger>
-        <TabsTrigger value="settings">Sistem Ayarları</TabsTrigger>
-        <TabsTrigger value="audit">Denetim Kayıtları</TabsTrigger>
+        <TabsTrigger value="users">{t("ad.tabUsers")}</TabsTrigger>
+        <TabsTrigger value="files">{t("ad.tabFiles")}</TabsTrigger>
+        <TabsTrigger value="settings">{t("ad.tabSettings")}</TabsTrigger>
+        <TabsTrigger value="audit">{t("ad.tabAudit")}</TabsTrigger>
       </TabsList>
       <TabsContent value="users" className="mt-6"><UsersTab /></TabsContent>
       <TabsContent value="files" className="mt-6"><FilesTab /></TabsContent>
@@ -53,6 +55,7 @@ function AdminPage() {
 
 function UsersTab() {
   const qc = useQueryClient();
+  const t = useT();
   const fetchUsers = useServerFn(listUsers);
   const create = useServerFn(createUser);
   const setQuota = useServerFn(updateUserQuota);
@@ -102,14 +105,14 @@ function UsersTab() {
         quota_mb: r.quota_mb || r.kota ? Number(r.quota_mb ?? r.kota) : undefined,
         is_admin: String(r.is_admin ?? r.admin ?? "").toString().toLowerCase().match(/^(true|1|evet|yes)$/) ? true : false,
       })).filter((r) => r.email && r.password.length >= 8);
-      if (!cleaned.length) { toast.error("Geçerli satır bulunamadı"); setBulkLoading(false); return; }
+      if (!cleaned.length) { toast.error(t("ad.bulkNoRows")); setBulkLoading(false); return; }
       const { results } = await bulkCreate({ data: { rows: cleaned } });
       setBulkResult(results);
       const ok = results.filter((r) => r.ok).length;
-      toast.success(`${ok}/${results.length} kullanıcı eklendi`);
+      toast.success(t("ad.bulkOk", ok, results.length));
       refresh();
     } catch (err: any) {
-      toast.error("Toplu ekleme başarısız", { description: err.message });
+      toast.error(t("ad.bulkFailed"), { description: err.message });
     } finally { setBulkLoading(false); }
   }
 
@@ -126,12 +129,12 @@ function UsersTab() {
           is_admin: form.is_admin,
         },
       });
-      toast.success("Kullanıcı eklendi");
+      toast.success(t("ad.userAdded"));
       setOpen(false);
       setForm({ email: "", password: "", display_name: "", quota_mb: "", is_admin: false });
       refresh();
     } catch (e: any) {
-      toast.error("Eklenemedi", { description: e.message });
+      toast.error(t("ad.userAddFailed"), { description: e.message });
     }
   }
 
@@ -139,50 +142,50 @@ function UsersTab() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Kullanıcılar</CardTitle>
-          <CardDescription>{users.length} kayıtlı kullanıcı</CardDescription>
+          <CardTitle>{t("ad.usersTitle")}</CardTitle>
+          <CardDescription>{t("ad.usersCount", users.length)}</CardDescription>
         </div>
         <div className="flex gap-2 flex-wrap">
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
-          <FileSpreadsheet className="size-4 mr-2" /> Excel ile Toplu Ekle
+          <FileSpreadsheet className="size-4 mr-2" /> {t("ad.bulkExcel")}
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><UserPlus className="size-4 mr-2" /> Yeni Kullanıcı</Button>
+            <Button><UserPlus className="size-4 mr-2" /> {t("ad.newUser")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Kullanıcı Ekle</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("ad.addUser")}</DialogTitle></DialogHeader>
             <form onSubmit={onCreate} className="space-y-3">
-              <div><Label>E-posta</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div><Label>Geçici Şifre</Label><Input type="text" required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-              <div><Label>Görünen Ad</Label><Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></div>
-              <div><Label>Kota (MB) — boş bırakılırsa varsayılan</Label><Input type="number" min={1} value={form.quota_mb} onChange={(e) => setForm({ ...form, quota_mb: e.target.value })} /></div>
-              <div className="flex items-center gap-2"><Switch checked={form.is_admin} onCheckedChange={(v) => setForm({ ...form, is_admin: v })} /> <span>Yönetici yetkisi</span></div>
-              <DialogFooter><Button type="submit">Oluştur</Button></DialogFooter>
+              <div><Label>{t("ad.colEmail")}</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+              <div><Label>{t("ad.tempPw")}</Label><Input type="text" required minLength={8} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+              <div><Label>{t("setup.displayName")}</Label><Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></div>
+              <div><Label>{t("ad.quotaDefault")}</Label><Input type="number" min={1} value={form.quota_mb} onChange={(e) => setForm({ ...form, quota_mb: e.target.value })} /></div>
+              <div className="flex items-center gap-2"><Switch checked={form.is_admin} onCheckedChange={(v) => setForm({ ...form, is_admin: v })} /> <span>{t("ad.adminRole")}</span></div>
+              <DialogFooter><Button type="submit">{t("ad.create")}</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
         <Dialog open={bulkOpen} onOpenChange={(v) => { setBulkOpen(v); if (!v) setBulkResult(null); }}>
           <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>Excel ile Toplu Kullanıcı Ekle</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("ad.bulkTitle")}</DialogTitle></DialogHeader>
             <div className="space-y-3 text-sm">
               <p className="text-muted-foreground">
-                Excel/CSV sütunları: <code>email, password, display_name, quota_mb, is_admin</code>.
-                Şifreler en az 8 karakter olmalı.
+                {t("ad.bulkCols")} <code>email, password, display_name, quota_mb, is_admin</code>.
+                {" "}{t("ad.bulkPwHint")}
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={downloadTemplate}>
-                  <Download className="size-4 mr-2" /> Şablon indir (.xlsx)
+                  <Download className="size-4 mr-2" /> {t("ad.bulkTemplate")}
                 </Button>
                 <Button onClick={() => fileRef.current?.click()} disabled={bulkLoading}>
-                  <FileSpreadsheet className="size-4 mr-2" /> {bulkLoading ? "Yükleniyor…" : "Dosya seç"}
+                  <FileSpreadsheet className="size-4 mr-2" /> {bulkLoading ? t("ad.bulkLoading") : t("ad.bulkPick")}
                 </Button>
                 <input ref={fileRef} type="file" hidden accept=".xlsx,.xls,.csv" onChange={onBulkPick} />
               </div>
               {bulkResult && (
                 <div className="max-h-72 overflow-auto border rounded">
                   <table className="w-full text-xs">
-                    <thead className="bg-muted/50 text-left"><tr><th className="p-2">E-posta</th><th className="p-2">Durum</th></tr></thead>
+                    <thead className="bg-muted/50 text-left"><tr><th className="p-2">{t("ad.colEmail")}</th><th className="p-2">{t("ad.colStatus")}</th></tr></thead>
                     <tbody>
                       {bulkResult.map((r, i) => (
                         <tr key={i} className="border-t">
@@ -204,13 +207,13 @@ function UsersTab() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>
-                <th className="p-3">E-posta</th>
-                <th className="p-3">Ad</th>
-                <th className="p-3">Kullanım</th>
-                <th className="p-3">Kota (MB)</th>
-                <th className="p-3">Durum</th>
-                <th className="p-3">Rol</th>
-                <th className="p-3 text-right">İşlemler</th>
+                <th className="p-3">{t("ad.colEmail")}</th>
+                <th className="p-3">{t("ad.colName")}</th>
+                <th className="p-3">{t("ad.colUsage")}</th>
+                <th className="p-3">{t("ad.colQuota")}</th>
+                <th className="p-3">{t("ad.colStatus")}</th>
+                <th className="p-3">{t("ad.colRole")}</th>
+                <th className="p-3 text-right">{t("ad.colActions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -228,7 +231,7 @@ function UsersTab() {
                         onSave={async (v) => {
                           try {
                             await setQuota({ data: { user_id: u.id, quota_mb: v } });
-                            toast.success("Kota güncellendi");
+                            toast.success(t("ad.quotaUpdated"));
                             refresh();
                           } catch (e: any) { toast.error(e.message); }
                         }}
@@ -238,36 +241,36 @@ function UsersTab() {
                       <Switch
                         checked={u.is_active}
                         onCheckedChange={async (v) => {
-                          try { await setActive({ data: { user_id: u.id, is_active: v } }); toast.success(v ? "Aktifleştirildi" : "Devre dışı"); refresh(); }
+                          try { await setActive({ data: { user_id: u.id, is_active: v } }); toast.success(v ? t("ad.activated") : t("ad.deactivated")); refresh(); }
                           catch (e: any) { toast.error(e.message); }
                         }}
                       />
                     </td>
                     <td className="p-3">
-                      {isAdmin ? <Badge>Admin</Badge> : <Badge variant="secondary">Kullanıcı</Badge>}
+                      {isAdmin ? <Badge>Admin</Badge> : <Badge variant="secondary">{t("settings.roleUser")}</Badge>}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" title={isAdmin ? "Admin yetkisini kaldır" : "Admin yap"}
+                        <Button size="sm" variant="ghost" title={isAdmin ? t("ad.removeAdmin") : t("ad.makeAdmin")}
                           onClick={async () => {
                             try { await setAdmin({ data: { user_id: u.id, make_admin: !isAdmin } }); refresh(); }
                             catch (e: any) { toast.error(e.message); }
                           }}>
                           {isAdmin ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
                         </Button>
-                        <Button size="sm" variant="ghost" title="Şifre sıfırla"
+                        <Button size="sm" variant="ghost" title={t("ad.resetPw")}
                           onClick={async () => {
-                            const np = prompt("Yeni geçici şifre (min 8 karakter):");
+                            const np = prompt(t("ad.resetPwPrompt"));
                             if (!np || np.length < 8) return;
-                            try { await resetPw({ data: { user_id: u.id, new_password: np } }); toast.success("Şifre sıfırlandı"); }
+                            try { await resetPw({ data: { user_id: u.id, new_password: np } }); toast.success(t("ad.pwReset")); }
                             catch (e: any) { toast.error(e.message); }
                           }}>
                           <KeyRound className="size-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" title="Sil"
+                        <Button size="sm" variant="ghost" title={t("common.delete")}
                           onClick={async () => {
-                            if (!confirm(`${u.email} ve tüm dosyaları silinsin mi?`)) return;
-                            try { await del({ data: { user_id: u.id } }); toast.success("Silindi"); refresh(); }
+                            if (!confirm(t("ad.deleteUserConfirm", u.email))) return;
+                            try { await del({ data: { user_id: u.id } }); toast.success(t("common.deleted")); refresh(); }
                             catch (e: any) { toast.error(e.message); }
                           }}>
                           <Trash2 className="size-4 text-destructive" />
@@ -299,6 +302,7 @@ function QuotaCell({ userId, value, onSave }: { userId: string; value: number; o
 
 function FilesTab() {
   const qc = useQueryClient();
+  const t = useT();
   const fetchAll = useServerFn(listAllFiles);
   const del = useServerFn(deleteFile);
   const { data: files = [] } = useQuery({ queryKey: ["admin-files"], queryFn: () => fetchAll() });
@@ -306,14 +310,14 @@ function FilesTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Tüm Dosyalar</CardTitle>
-        <CardDescription>{files.length} dosya (son 500)</CardDescription>
+        <CardTitle>{t("ad.allFiles")}</CardTitle>
+        <CardDescription>{t("ad.allFilesCount", files.length)}</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
-              <tr><th className="p-3">Dosya</th><th className="p-3">Sahip</th><th className="p-3">Boyut</th><th className="p-3">Tür</th><th className="p-3 text-right">İşlem</th></tr>
+              <tr><th className="p-3">{t("ad.colFile")}</th><th className="p-3">{t("ad.colOwner")}</th><th className="p-3">{t("ad.colSize")}</th><th className="p-3">{t("ad.colType")}</th><th className="p-3 text-right">{t("ad.colAction")}</th></tr>
             </thead>
             <tbody>
               {files.map((f: any) => (
@@ -324,8 +328,8 @@ function FilesTab() {
                   <td className="p-3 text-xs">{f.mime_type}</td>
                   <td className="p-3 text-right">
                     <Button size="sm" variant="ghost" onClick={async () => {
-                      if (!confirm(`"${f.name}" silinsin mi?`)) return;
-                      try { await del({ data: { file_id: f.id } }); toast.success("Silindi"); qc.invalidateQueries({ queryKey: ["admin-files"] }); }
+                      if (!confirm(t("ad.deleteFileConfirm", f.name))) return;
+                      try { await del({ data: { file_id: f.id } }); toast.success(t("common.deleted")); qc.invalidateQueries({ queryKey: ["admin-files"] }); }
                       catch (e: any) { toast.error(e.message); }
                     }}>
                       <Trash2 className="size-4 text-destructive" />
@@ -342,6 +346,7 @@ function FilesTab() {
 }
 
 function SettingsTab() {
+  const t = useT();
   const fetchSettings = useServerFn(getSettings);
   const save = useServerFn(updateSettings);
   const { data, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => fetchSettings() });
@@ -365,7 +370,7 @@ function SettingsTab() {
           allowed_mime_prefixes: mimes.split(",").map((s) => s.trim()).filter(Boolean),
         },
       });
-      toast.success("Ayarlar kaydedildi");
+      toast.success(t("common.saved"));
       refetch();
     } catch (e: any) { toast.error(e.message); }
   }
@@ -373,50 +378,53 @@ function SettingsTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sistem Ayarları</CardTitle>
-        <CardDescription>Yeni kullanıcıların varsayılan kotası ve dosya kısıtlamaları</CardDescription>
+        <CardTitle>{t("ad.sysTitle")}</CardTitle>
+        <CardDescription>{t("ad.sysDesc")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 max-w-md">
-        <div className="space-y-2"><Label>Varsayılan Kota (MB)</Label><Input type="number" value={defaultQuota} onChange={(e) => setDefaultQuota(e.target.value)} /></div>
-        <div className="space-y-2"><Label>Maksimum Dosya Boyutu (MB)</Label><Input type="number" value={maxFile} onChange={(e) => setMaxFile(e.target.value)} /></div>
+        <div className="space-y-2"><Label>{t("ad.defaultQuota")}</Label><Input type="number" value={defaultQuota} onChange={(e) => setDefaultQuota(e.target.value)} /></div>
+        <div className="space-y-2"><Label>{t("ad.maxFile")}</Label><Input type="number" value={maxFile} onChange={(e) => setMaxFile(e.target.value)} /></div>
         <div className="space-y-2">
-          <Label>İzin verilen MIME önekleri (virgülle ayrılmış, boş = tümü)</Label>
+          <Label>{t("ad.mimePrefixes")}</Label>
           <Input placeholder="image/, application/pdf" value={mimes} onChange={(e) => setMimes(e.target.value)} />
         </div>
-        <Button onClick={onSave}><Save className="size-4 mr-2" /> Kaydet</Button>
+        <Button onClick={onSave}><Save className="size-4 mr-2" /> {t("common.save")}</Button>
       </CardContent>
     </Card>
   );
 }
 
 function AuditTab() {
+  const t = useT();
+  const { lang } = useLang();
+  const dateLocale = lang === "tr" ? tr : enUS;
   const fetchLogs = useServerFn(listAuditLogs);
   const { data: logs = [], refetch } = useQuery({ queryKey: ["audit"], queryFn: () => fetchLogs({ data: { limit: 300 } }) });
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="flex items-center gap-2"><ScrollText className="size-5" /> Denetim Kayıtları</CardTitle>
-          <CardDescription>Son {logs.length} işlem</CardDescription>
+          <CardTitle className="flex items-center gap-2"><ScrollText className="size-5" /> {t("ad.auditTitle")}</CardTitle>
+          <CardDescription>{t("ad.auditCount", logs.length)}</CardDescription>
         </div>
-        <Button size="sm" variant="outline" onClick={() => refetch()}>Yenile</Button>
+        <Button size="sm" variant="outline" onClick={() => refetch()}>{t("common.refresh")}</Button>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>
-                <th className="p-3">Zaman</th>
-                <th className="p-3">Kullanıcı</th>
-                <th className="p-3">İşlem</th>
-                <th className="p-3">Kaynak</th>
-                <th className="p-3">Detay</th>
+                <th className="p-3">{t("ad.colTime")}</th>
+                <th className="p-3">{t("ad.colUser")}</th>
+                <th className="p-3">{t("ad.colAction2")}</th>
+                <th className="p-3">{t("ad.colResource")}</th>
+                <th className="p-3">{t("ad.colDetail")}</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((l: any) => (
                 <tr key={l.id} className="border-t align-top">
-                  <td className="p-3 text-xs whitespace-nowrap">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true, locale: tr })}</td>
+                  <td className="p-3 text-xs whitespace-nowrap">{formatDistanceToNow(new Date(l.created_at), { addSuffix: true, locale: dateLocale })}</td>
                   <td className="p-3 text-xs font-mono">{l.actor_email ?? l.actor_id ?? "—"}</td>
                   <td className="p-3"><Badge variant="secondary">{l.action}</Badge></td>
                   <td className="p-3 text-xs">{l.resource_type ?? "—"}{l.resource_id ? ` · ${String(l.resource_id).slice(0, 8)}` : ""}</td>
@@ -425,7 +433,7 @@ function AuditTab() {
                   </td>
                 </tr>
               ))}
-              {!logs.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Henüz kayıt yok.</td></tr>}
+              {!logs.length && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">{t("ad.auditEmpty")}</td></tr>}
             </tbody>
           </table>
         </div>

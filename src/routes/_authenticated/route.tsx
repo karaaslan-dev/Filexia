@@ -5,6 +5,7 @@ import { ShieldCheck, LogOut, FolderOpen, Settings, Users } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyProfile } from "@/lib/files.functions";
+import { useT, LanguageToggle } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -22,6 +23,7 @@ function AuthedLayout() {
   const qc = useQueryClient();
   const fetchProfile = useServerFn(getMyProfile);
   const { data } = useQuery({ queryKey: ["me"], queryFn: () => fetchProfile() });
+  const t = useT();
 
   async function handleSignOut() {
     await qc.cancelQueries();
@@ -36,22 +38,23 @@ function AuthedLayout() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/drive" className="flex items-center gap-2 font-semibold">
             <ShieldCheck className="size-5 text-primary" />
-            Filexa
+            {t("brand.name")}
           </Link>
           <nav className="flex items-center gap-1">
             <Button asChild variant="ghost" size="sm">
-              <Link to="/drive"><FolderOpen className="size-4 mr-2" /> Dosyalarım</Link>
+              <Link to="/drive"><FolderOpen className="size-4 mr-2" /> {t("nav.files")}</Link>
             </Button>
             {data?.isAdmin && (
               <Button asChild variant="ghost" size="sm">
-                <Link to="/admin"><Users className="size-4 mr-2" /> Yönetim</Link>
+                <Link to="/admin"><Users className="size-4 mr-2" /> {t("nav.admin")}</Link>
               </Button>
             )}
             <Button asChild variant="ghost" size="sm">
-              <Link to="/settings"><Settings className="size-4 mr-2" /> Ayarlar</Link>
+              <Link to="/settings"><Settings className="size-4 mr-2" /> {t("nav.settings")}</Link>
             </Button>
+            <LanguageToggle />
             <Button onClick={handleSignOut} variant="outline" size="sm">
-              <LogOut className="size-4 mr-2" /> Çıkış
+              <LogOut className="size-4 mr-2" /> {t("nav.signOut")}
             </Button>
           </nav>
         </div>
@@ -60,7 +63,7 @@ function AuthedLayout() {
         <Outlet />
       </main>
       <footer className="border-t mt-12 py-6 text-center text-xs text-muted-foreground">
-        Geliştirici: <span className="font-medium text-foreground">Enes KARAASLAN</span>
+        {t("footer.developer")} <span className="font-medium text-foreground">Enes KARAASLAN</span>
       </footer>
     </div>
   );
