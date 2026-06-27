@@ -30,6 +30,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Share2, Copy, Ban, ExternalLink } from "lucide-react";
+import { useT, useLang } from "@/lib/i18n";
+import { enUS } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/drive")({
   head: () => ({ meta: [{ title: "Dosyalarım — Filexa" }] }),
@@ -45,6 +47,9 @@ function fmtBytes(b: number) {
 
 function DrivePage() {
   const qc = useQueryClient();
+  const t = useT();
+  const { lang } = useLang();
+  const dateLocale = lang === "tr" ? tr : enUS;
   const fetchFiles = useServerFn(listMyFiles);
   const fetchFolders = useServerFn(listMyFolders);
   const fetchProfile = useServerFn(getMyProfile);
@@ -128,9 +133,9 @@ function DrivePage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (file.size > maxMb * 1024 * 1024) { toast.error(`Dosya çok büyük (maks ${maxMb} MB)`); return; }
+    if (file.size > maxMb * 1024 * 1024) { toast.error(t("drive.tooLarge", maxMb)); return; }
     if (profile && profile.storage_used_bytes + file.size > profile.storage_quota_mb * 1024 * 1024) {
-      toast.error("Kota aşılacak"); return;
+      toast.error(t("drive.quotaExceed")); return;
     }
     const { data: sess } = await supabase.auth.getUser();
     const uid = sess.user?.id;
@@ -138,34 +143,32 @@ function DrivePage() {
 
     // 1) SHA-256 hesapla
     setUploading({ name: file.name, progress: 2 });
-    setVtStatus("SHA-256 hesaplanıyor…");
+    setVtStatus(t("drive.sha"));
     const buf = await file.arrayBuffer();
     const hashBuf = await crypto.subtle.digest("SHA-256", buf);
     const sha256 = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 
     // 2) VirusTotal ön-kontrol
-    setVtStatus("VirusTotal kontrol ediliyor…");
+    setVtStatus(t("drive.vtCheck"));
     try {
       const vt: any = await vtCheck({ data: { sha256 } });
       if (!vt.found) {
         setUploading(null); setVtStatus(null);
-        toast.error("VirusTotal raporu gerekli", {
-          description: "Bu dosyanın VT raporu yok. virustotal.com adresine yükleyip taradıktan sonra tekrar deneyin.",
-          action: { label: "VT'yi aç", onClick: () => window.open("https://www.virustotal.com/gui/home/upload", "_blank") },
+        toast.error(t("drive.vtRequired"), {
+          description: t("drive.vtRequiredDesc"),
+          action: { label: t("drive.vtOpen"), onClick: () => window.open("https://www.virustotal.com/gui/home/upload", "_blank") },
         });
         return;
       }
       if ((vt.malicious ?? 0) > 0 || (vt.suspicious ?? 0) > 1) {
         setUploading(null); setVtStatus(null);
-        toast.error("Güvenlik riski tespit edildi", {
-          description: `${vt.malicious} kötü amaçlı / ${vt.suspicious} şüpheli. Yükleme engellendi.`,
-        });
+        toast.error(t("drive.vtRisk"), { description: t("drive.vtRiskDesc", vt.malicious, vt.suspicious) });
         return;
       }
-      setVtStatus(`VT temiz (${vt.harmless + vt.undetected} motor)`);
+      setVtStatus(t("drive.vtClean", vt.harmless + vt.undetected));
     } catch (e: any) {
       setUploading(null); setVtStatus(null);
-      toast.error("VirusTotal doğrulaması başarısız", { description: e.message });
+      toast.error(t("drive.vtFailed"), { description: e.message });
       return;
     }
 
@@ -174,7 +177,7 @@ function DrivePage() {
     const { error: upErr } = await supabase.storage.from("user-files").upload(path, file, {
       cacheControl: "3600", upsert: false, contentType: file.type || "application/octet-stream",
     });
-    if (upErr) { setUploading(null); setVtStatus(null); toast.error("Yükleme başarısız", { description: upErr.message }); return; }
+    if (upErr) { setUploading(null); setVtStatus(null); toast.error(t("drive.uploadFailed"), { description: upErr.message }); return; }
     setUploading({ name: file.name, progress: 80 });
     try {
       await register({
@@ -185,11 +188,11 @@ function DrivePage() {
           sha256,
         },
       });
-      toast.success("Yüklendi", { description: file.name });
+      toast.success(t("drive.uploaded"), { description: file.name });
       qc.invalidateQueries({ queryKey: ["files"] });
       qc.invalidateQueries({ queryKey: ["me"] });
     } catch (err: any) {
-      toast.error("Kayıt edilemedi", { description: err.message });
+      toast.error(t("drive.registerFailed"), { description: err.message });
     } finally { setUploading(null); setVtStatus(null); }
   }
 
@@ -205,7 +208,7 @@ function DrivePage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (e: any) { toast.error("İndirme bağlantısı alınamadı", { description: e.message }); }
+    } catch (e: any) { toast.error(t("drive.dlUrlFailed"), { description: e.message }); }
   }
 
   function isPreviewable(mime: string) {
@@ -213,30 +216,30 @@ function DrivePage() {
   }
 
   async function onPreview(id: string, mime: string) {
-    if (!isPreviewable(mime)) { toast.info("Bu dosya türü önizlenemez"); return; }
+    if (!isPreviewable(mime)) { toast.info(t("drive.notPreviewable")); return; }
     try {
       const r: any = await previewUrl({ data: { file_id: id } });
       setPreview({ url: r.url, name: r.name, mime: r.mime_type });
-    } catch (e: any) { toast.error("Önizleme alınamadı", { description: e.message }); }
+    } catch (e: any) { toast.error(t("drive.previewFailed"), { description: e.message }); }
   }
 
   async function onBulkDelete() {
     if (!selFiles.size && !selFolders.size) return;
     const n = selFiles.size + selFolders.size;
-    if (!confirm(`${n} öğe silinsin mi? (klasörler içerikleriyle birlikte)`)) return;
+    if (!confirm(t("drive.confirmBulk", n))) return;
     try {
       if (selFiles.size) await bulkDel({ data: { file_ids: Array.from(selFiles) } });
       for (const fid of selFolders) await rmFolder({ data: { id: fid } });
-      toast.success(`${n} öğe silindi`);
+      toast.success(t("drive.bulkDeleted", n));
       setSelFiles(new Set()); setSelFolders(new Set());
       qc.invalidateQueries({ queryKey: ["files"] });
       qc.invalidateQueries({ queryKey: ["folders"] });
       qc.invalidateQueries({ queryKey: ["me"] });
-    } catch (e: any) { toast.error("Silinemedi", { description: e.message }); }
+    } catch (e: any) { toast.error(t("drive.deleteFailed"), { description: e.message }); }
   }
 
   async function onBulkZip() {
-    if (!selFiles.size) { toast.info("ZIP için dosya seç"); return; }
+    if (!selFiles.size) { toast.info(t("drive.zipPickFiles")); return; }
     setZipping(true);
     try {
       const { items } = await bulkUrls({ data: { file_ids: Array.from(selFiles) } });
@@ -252,31 +255,31 @@ function DrivePage() {
       const blob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `vaultly-${Date.now()}.zip`;
+      a.download = `filexa-${Date.now()}.zip`;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast.success(`${done} dosya ZIP olarak indirildi`);
+      toast.success(t("drive.zipDone", done));
     } catch (e: any) {
-      toast.error("ZIP oluşturulamadı", { description: e.message });
+      toast.error(t("drive.zipFailed"), { description: e.message });
     } finally { setZipping(false); }
   }
 
   async function onNewFolder() {
-    const name = prompt("Yeni klasör adı:");
+    const name = prompt(t("drive.newFolderPrompt"));
     if (!name) return;
     try {
       await mkFolder({ data: { name: name.trim(), parent_id: currentFolderId } });
       qc.invalidateQueries({ queryKey: ["folders"] });
-    } catch (e: any) { toast.error("Klasör oluşturulamadı", { description: e.message }); }
+    } catch (e: any) { toast.error(t("drive.newFolderFailed"), { description: e.message }); }
   }
 
   async function onRenameFolder(id: string, oldName: string) {
-    const name = prompt("Yeni ad:", oldName);
+    const name = prompt(t("drive.renamePrompt"), oldName);
     if (!name || name === oldName) return;
     try {
       await renameFolderFn({ data: { id, name: name.trim() } });
       qc.invalidateQueries({ queryKey: ["folders"] });
-    } catch (e: any) { toast.error("Yeniden adlandırılamadı", { description: e.message }); }
+    } catch (e: any) { toast.error(t("drive.renameFailed"), { description: e.message }); }
   }
 
   const anySelected = selFiles.size + selFolders.size > 0;
@@ -286,31 +289,31 @@ function DrivePage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl"><HardDrive className="size-5 shrink-0" /> Dosyalarım</CardTitle>
-            <CardDescription>{files.length} dosya · {folders.length} klasör · Maks tek dosya {maxMb} MB</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl"><HardDrive className="size-5 shrink-0" /> {t("drive.title")}</CardTitle>
+            <CardDescription>{t("drive.summary", files.length, folders.length, maxMb)}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1 min-w-0">
                 <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-9" placeholder="Bu klasörde ara…" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <Input className="pl-9" placeholder={t("drive.search")} value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onNewFolder} className="flex-1 sm:flex-none">
-                  <FolderPlus className="size-4 sm:mr-2" /><span className="hidden sm:inline">Klasör</span>
+                  <FolderPlus className="size-4 sm:mr-2" /><span className="hidden sm:inline">{t("drive.folder")}</span>
                 </Button>
                 <Button onClick={() => inputRef.current?.click()} disabled={!!uploading || !profile?.is_active} className="flex-1 sm:flex-none">
-                  <Upload className="size-4 sm:mr-2" /><span className="hidden sm:inline">Yükle</span>
+                  <Upload className="size-4 sm:mr-2" /><span className="hidden sm:inline">{t("drive.upload")}</span>
                 </Button>
-                <Button variant="outline" onClick={() => setLinksOpen(true)} className="flex-1 sm:flex-none" title="Paylaşımlarım">
-                  <Share2 className="size-4 sm:mr-2" /><span className="hidden sm:inline">Paylaşımlar</span>
+                <Button variant="outline" onClick={() => setLinksOpen(true)} className="flex-1 sm:flex-none" title={t("drive.sharesTitle")}>
+                  <Share2 className="size-4 sm:mr-2" /><span className="hidden sm:inline">{t("drive.shares")}</span>
                 </Button>
                 <input ref={inputRef} type="file" className="hidden" onChange={onPick} />
               </div>
             </div>
             {uploading && (
               <div className="rounded-md border p-3 space-y-2">
-                <div className="text-sm truncate">Yükleniyor: {uploading.name}</div>
+                <div className="text-sm truncate">{t("drive.uploading", uploading.name)}</div>
                 {vtStatus && <div className="text-xs text-muted-foreground">{vtStatus}</div>}
                 <Progress value={uploading.progress} />
               </div>
@@ -319,12 +322,12 @@ function DrivePage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg sm:text-xl">Depolama</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">{t("drive.storage")}</CardTitle>
             <CardDescription>{profile ? `${fmtBytes(profile.storage_used_bytes)} / ${profile.storage_quota_mb} MB` : "—"}</CardDescription>
           </CardHeader>
           <CardContent>
             <Progress value={usedPct} />
-            <p className="text-xs text-muted-foreground mt-2">%{usedPct.toFixed(1)} kullanıldı</p>
+            <p className="text-xs text-muted-foreground mt-2">{t("drive.storageUsed", usedPct.toFixed(1))}</p>
           </CardContent>
         </Card>
       </div>
@@ -332,7 +335,7 @@ function DrivePage() {
       {/* Breadcrumb */}
       <div className="flex items-center gap-1 text-sm flex-wrap">
         <button onClick={() => navigateTo(null)} className="flex items-center gap-1 hover:underline">
-          <Home className="size-4" /> Kök
+          <Home className="size-4" /> {t("drive.root")}
         </button>
         {breadcrumb.map((b) => (
           <span key={b.id} className="flex items-center gap-1">
@@ -348,13 +351,13 @@ function DrivePage() {
           <Button size="sm" variant="ghost" onClick={() => { setSelFiles(new Set()); setSelFolders(new Set()); }}>
             <X className="size-4" />
           </Button>
-          <span className="text-sm font-medium">{selFiles.size + selFolders.size} seçili</span>
+          <span className="text-sm font-medium">{t("drive.selected", selFiles.size + selFolders.size)}</span>
           <div className="ml-auto flex gap-2 flex-wrap">
             <Button size="sm" variant="outline" disabled={!selFiles.size || zipping} onClick={onBulkZip}>
-              <Archive className="size-4 mr-1" /> {zipping ? "ZIP hazırlanıyor…" : "ZIP indir"}
+              <Archive className="size-4 mr-1" /> {zipping ? t("drive.zipPreparing") : t("drive.zipDownload")}
             </Button>
             <Button size="sm" variant="destructive" onClick={onBulkDelete}>
-              <Trash2 className="size-4 mr-1" /> Sil
+              <Trash2 className="size-4 mr-1" /> {t("common.delete")}
             </Button>
           </div>
         </div>
@@ -366,14 +369,14 @@ function DrivePage() {
             <div className="p-12 text-center text-muted-foreground">
               <FileIcon className="size-10 mx-auto mb-3 opacity-50" />
               {childFolders.length + childFiles.length === 0
-                ? "Bu klasör boş. Yükleyin veya yeni klasör oluşturun."
-                : "Eşleşen öğe bulunamadı."}
+                ? t("drive.emptyFolder")
+                : t("drive.noMatch")}
             </div>
           ) : (
             <ul className="divide-y">
               <li className="flex items-center gap-3 p-3 bg-muted/30 text-xs text-muted-foreground">
                 <Checkbox checked={anySelected && (selFiles.size + selFolders.size) === (visibleFiles.length + visibleFolders.length)} onCheckedChange={toggleAll} />
-                <span>Tümünü seç</span>
+                <span>{t("drive.selectAll")}</span>
               </li>
               {visibleFolders.map((f) => (
                 <li key={`d-${f.id}`} className="grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 p-3 sm:p-4 hover:bg-muted/40">
@@ -381,15 +384,15 @@ function DrivePage() {
                   <Folder className="size-5 text-primary shrink-0" />
                   <button onClick={() => navigateTo(f.id)} className="text-left min-w-0">
                     <div className="font-medium truncate">{f.name}</div>
-                    <div className="text-xs text-muted-foreground">Klasör</div>
+                    <div className="text-xs text-muted-foreground">{t("drive.folder")}</div>
                   </button>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => onRenameFolder(f.id, f.name)}><Pencil className="size-4" /></Button>
                     <Button size="sm" variant="ghost" onClick={async () => {
-                      if (!confirm(`"${f.name}" ve içindekiler silinsin mi?`)) return;
+                      if (!confirm(t("drive.confirmDeleteFolder", f.name))) return;
                       try {
                         await rmFolder({ data: { id: f.id } });
-                        toast.success("Klasör silindi");
+                        toast.success(t("drive.folderDeleted"));
                         qc.invalidateQueries({ queryKey: ["folders"] });
                         qc.invalidateQueries({ queryKey: ["files"] });
                         qc.invalidateQueries({ queryKey: ["me"] });
@@ -407,23 +410,23 @@ function DrivePage() {
                   <div className="min-w-0">
                     <div className="font-medium truncate">{f.name}</div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {fmtBytes(f.size_bytes)} · {formatDistanceToNow(new Date(f.created_at), { addSuffix: true, locale: tr })}
+                      {fmtBytes(f.size_bytes)} · {formatDistanceToNow(new Date(f.created_at), { addSuffix: true, locale: dateLocale })}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     {isPreviewable(f.mime_type) && (
-                      <Button size="sm" variant="ghost" title="Önizle" onClick={() => onPreview(f.id, f.mime_type)}>
+                      <Button size="sm" variant="ghost" title={t("drive.preview")} onClick={() => onPreview(f.id, f.mime_type)}>
                         <Eye className="size-4" />
                       </Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => onDownload(f.id)}><Download className="size-4" /></Button>
-                    <Button size="sm" variant="ghost" title="Paylaş" onClick={() => setShareFor({ id: f.id, name: f.name })}>
+                    <Button size="sm" variant="ghost" title={t("drive.share")} onClick={() => setShareFor({ id: f.id, name: f.name })}>
                       <Share2 className="size-4" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => {
-                      if (confirm(`"${f.name}" silinsin mi?`)) delMut.mutate(f.id, {
-                        onSuccess: () => toast.success("Dosya silindi"),
-                        onError: (e: any) => toast.error("Silinemedi", { description: e.message }),
+                      if (confirm(t("drive.confirmDeleteFile", f.name))) delMut.mutate(f.id, {
+                        onSuccess: () => toast.success(t("drive.fileDeleted")),
+                        onError: (e: any) => toast.error(t("drive.deleteFailed"), { description: e.message }),
                       });
                     }}>
                       <Trash2 className="size-4 text-destructive" />
