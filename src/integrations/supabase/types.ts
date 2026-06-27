@@ -46,8 +46,11 @@ export type Database = {
           mime_type: string | null
           name: string
           owner_id: string
+          sha256: string | null
           size_bytes: number
           storage_path: string
+          vt_scanned_at: string | null
+          vt_stats: Json | null
         }
         Insert: {
           created_at?: string
@@ -56,8 +59,11 @@ export type Database = {
           mime_type?: string | null
           name: string
           owner_id: string
+          sha256?: string | null
           size_bytes: number
           storage_path: string
+          vt_scanned_at?: string | null
+          vt_stats?: Json | null
         }
         Update: {
           created_at?: string
@@ -66,8 +72,11 @@ export type Database = {
           mime_type?: string | null
           name?: string
           owner_id?: string
+          sha256?: string | null
           size_bytes?: number
           storage_path?: string
+          vt_scanned_at?: string | null
+          vt_stats?: Json | null
         }
         Relationships: [
           {

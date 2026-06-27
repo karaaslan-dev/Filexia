@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { listMyFiles, registerFile, deleteFile, getDownloadUrl, getMyProfile } from "@/lib/files.functions";
+import { listMyFiles, registerFile, deleteFile, getDownloadUrl, getMyProfile, checkVirusTotal } from "@/lib/files.functions";
 import {
   listMyFolders, createFolder, renameFolder, deleteFolder,
   bulkDeleteFiles, getBulkDownloadUrls,
@@ -51,6 +51,7 @@ function DrivePage() {
   const register = useServerFn(registerFile);
   const removeOne = useServerFn(deleteFile);
   const downloadUrl = useServerFn(getDownloadUrl);
+  const vtCheck = useServerFn(checkVirusTotal);
   const mkFolder = useServerFn(createFolder);
   const renameFolderFn = useServerFn(renameFolder);
   const rmFolder = useServerFn(deleteFolder);
@@ -70,6 +71,7 @@ function DrivePage() {
   const [selFiles, setSelFiles] = useState<Set<string>>(new Set());
   const [selFolders, setSelFolders] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState<{ name: string; progress: number } | null>(null);
+  const [vtStatus, setVtStatus] = useState<string | null>(null);
   const [zipping, setZipping] = useState(false);
   const [shareFor, setShareFor] = useState<{ id: string; name: string } | null>(null);
   const [linksOpen, setLinksOpen] = useState(false);
@@ -131,12 +133,46 @@ function DrivePage() {
     const { data: sess } = await supabase.auth.getUser();
     const uid = sess.user?.id;
     if (!uid) return;
+
+    // 1) SHA-256 hesapla
+    setUploading({ name: file.name, progress: 2 });
+    setVtStatus("SHA-256 hesaplanıyor…");
+    const buf = await file.arrayBuffer();
+    const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+    const sha256 = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+
+    // 2) VirusTotal ön-kontrol
+    setVtStatus("VirusTotal kontrol ediliyor…");
+    try {
+      const vt: any = await vtCheck({ data: { sha256 } });
+      if (!vt.found) {
+        setUploading(null); setVtStatus(null);
+        toast.error("VirusTotal raporu gerekli", {
+          description: "Bu dosyanın VT raporu yok. virustotal.com adresine yükleyip taradıktan sonra tekrar deneyin.",
+          action: { label: "VT'yi aç", onClick: () => window.open("https://www.virustotal.com/gui/home/upload", "_blank") },
+        });
+        return;
+      }
+      if ((vt.malicious ?? 0) > 0 || (vt.suspicious ?? 0) > 1) {
+        setUploading(null); setVtStatus(null);
+        toast.error("Güvenlik riski tespit edildi", {
+          description: `${vt.malicious} kötü amaçlı / ${vt.suspicious} şüpheli. Yükleme engellendi.`,
+        });
+        return;
+      }
+      setVtStatus(`VT temiz (${vt.harmless + vt.undetected} motor)`);
+    } catch (e: any) {
+      setUploading(null); setVtStatus(null);
+      toast.error("VirusTotal doğrulaması başarısız", { description: e.message });
+      return;
+    }
+
     const path = `${uid}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
-    setUploading({ name: file.name, progress: 10 });
+    setUploading({ name: file.name, progress: 30 });
     const { error: upErr } = await supabase.storage.from("user-files").upload(path, file, {
       cacheControl: "3600", upsert: false, contentType: file.type || "application/octet-stream",
     });
-    if (upErr) { setUploading(null); toast.error("Yükleme başarısız", { description: upErr.message }); return; }
+    if (upErr) { setUploading(null); setVtStatus(null); toast.error("Yükleme başarısız", { description: upErr.message }); return; }
     setUploading({ name: file.name, progress: 80 });
     try {
       await register({
@@ -144,6 +180,7 @@ function DrivePage() {
           storage_path: path, name: file.name, size_bytes: file.size,
           mime_type: file.type || "application/octet-stream",
           folder_id: currentFolderId,
+          sha256,
         },
       });
       toast.success("Yüklendi", { description: file.name });
@@ -151,7 +188,7 @@ function DrivePage() {
       qc.invalidateQueries({ queryKey: ["me"] });
     } catch (err: any) {
       toast.error("Kayıt edilemedi", { description: err.message });
-    } finally { setUploading(null); }
+    } finally { setUploading(null); setVtStatus(null); }
   }
 
   async function onDownload(id: string) {
@@ -252,6 +289,7 @@ function DrivePage() {
             {uploading && (
               <div className="rounded-md border p-3 space-y-2">
                 <div className="text-sm truncate">Yükleniyor: {uploading.name}</div>
+                {vtStatus && <div className="text-xs text-muted-foreground">{vtStatus}</div>}
                 <Progress value={uploading.progress} />
               </div>
             )}
