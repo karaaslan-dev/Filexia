@@ -21,7 +21,8 @@ import { toast } from "sonner";
 import { UserPlus, KeyRound, Trash2, ShieldCheck, ShieldOff, Save, FileSpreadsheet, Download, ScrollText } from "lucide-react";
 import * as XLSX from "xlsx";
 import { formatDistanceToNow } from "date-fns";
-import { tr } from "date-fns/locale";
+import { tr, enUS } from "date-fns/locale";
+import { useT, useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Yönetim — Filexa" }] }),
@@ -35,13 +36,14 @@ function fmtBytes(b: number) {
 }
 
 function AdminPage() {
+  const t = useT();
   return (
     <Tabs defaultValue="users">
       <TabsList>
-        <TabsTrigger value="users">Kullanıcılar</TabsTrigger>
-        <TabsTrigger value="files">Tüm Dosyalar</TabsTrigger>
-        <TabsTrigger value="settings">Sistem Ayarları</TabsTrigger>
-        <TabsTrigger value="audit">Denetim Kayıtları</TabsTrigger>
+        <TabsTrigger value="users">{t("ad.tabUsers")}</TabsTrigger>
+        <TabsTrigger value="files">{t("ad.tabFiles")}</TabsTrigger>
+        <TabsTrigger value="settings">{t("ad.tabSettings")}</TabsTrigger>
+        <TabsTrigger value="audit">{t("ad.tabAudit")}</TabsTrigger>
       </TabsList>
       <TabsContent value="users" className="mt-6"><UsersTab /></TabsContent>
       <TabsContent value="files" className="mt-6"><FilesTab /></TabsContent>
