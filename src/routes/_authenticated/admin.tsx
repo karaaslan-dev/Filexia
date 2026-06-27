@@ -24,7 +24,7 @@ import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/admin")({
-  head: () => ({ meta: [{ title: "Yönetim — Kasaport" }] }),
+  head: () => ({ meta: [{ title: "Yönetim — Filexa" }] }),
   component: AdminPage,
 });
 
