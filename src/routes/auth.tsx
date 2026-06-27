@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Lock, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Giriş — Vaultly" }] }),
+  head: () => ({ meta: [{ title: "Giriş — Kasaport" }] }),
   component: AuthPage,
 });
 
@@ -43,7 +43,7 @@ function AuthPage() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-6">
           <ShieldCheck className="size-7 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Vaultly</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Kasaport</h1>
         </div>
         <Card>
           <CardHeader>
@@ -69,6 +69,9 @@ function AuthPage() {
             </form>
           </CardContent>
         </Card>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Geliştirici: <span className="font-medium text-foreground">Enes KARAASLAN</span>
+        </p>
       </div>
     </div>
   );

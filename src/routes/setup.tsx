@@ -12,7 +12,7 @@ import { ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/setup")({
   ssr: false,
-  head: () => ({ meta: [{ title: "İlk Kurulum — Vaultly" }] }),
+  head: () => ({ meta: [{ title: "İlk Kurulum — Kasaport" }] }),
   component: SetupPage,
 });
 
