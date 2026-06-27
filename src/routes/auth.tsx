@@ -91,48 +91,48 @@ function UserGuideDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const steps = [
     {
       icon: LogIn,
-      title: "1) Sisteme nasıl girilir?",
-      body: "Yöneticiniz size bir e-posta ve geçici şifre verir. Yukarıdaki formu doldurup 'Giriş Yap' butonuna tıklayın. İlk girişte sistem sizden yeni bir şifre belirlemenizi isteyecek. Şifrenizi kimseyle paylaşmayın.",
+      title: "1. Sisteme Giriş",
+      body: "Hesabınız sistem yöneticisi tarafından oluşturulur ve tarafınıza kurumsal e-posta adresiniz ile geçici bir şifre iletilir. Giriş formunda kimlik bilgilerinizi girerek oturum açabilirsiniz. İlk girişte güvenlik politikası gereği şifrenizin değiştirilmesi zorunludur. Kimlik bilgilerinizi üçüncü kişilerle paylaşmayınız.",
     },
     {
       icon: KeyRound,
-      title: "2) Şifremi nasıl değiştiririm?",
-      body: "Giriş yaptıktan sonra sağ üstteki 'Ayarlar' butonuna tıklayın. Açılan sayfada yeni şifrenizi yazıp kaydedin. Şifreniz en az 8 karakter olmalı.",
+      title: "2. Şifre Yönetimi",
+      body: "Oturum açtıktan sonra sağ üst köşede yer alan 'Ayarlar' bölümünden şifrenizi güncelleyebilirsiniz. Belirleyeceğiniz şifre en az 8 karakter uzunluğunda olmalı; büyük/küçük harf ve rakam içermesi önerilir. Şifrenizi düzenli aralıklarla yenilemeniz tavsiye edilir.",
     },
     {
       icon: FolderTree,
-      title: "3) Klasör nasıl oluştururum?",
-      body: "'Dosyalarım' sayfasında 'Yeni Klasör' butonuna basın, bir isim girin ve onaylayın. Bir klasörün içine girmek için üstüne tıklayın. Üst tarafta yolun (Anasayfa › Klasör1 › ...) görüleceğini unutmayın; oradan da geri dönebilirsiniz.",
+      title: "3. Klasör Yapısının Oluşturulması",
+      body: "'Dosyalarım' bölümünde 'Yeni Klasör' seçeneği aracılığıyla iç içe klasör yapıları oluşturabilirsiniz. Klasör adına tıklayarak içeriğine erişebilir; sayfa üst kısmındaki yol göstergesi (breadcrumb) üzerinden üst dizinlere kolaylıkla dönebilirsiniz. Klasör organizasyonu, dosyalarınızın yönetimini kolaylaştırır.",
     },
     {
       icon: ShieldAlert,
-      title: "4) Dosya yüklemeden önce VirusTotal şart",
-      body: "Güvenlik için her dosya yüklenmeden önce VirusTotal'da taranmış olmalı. Adımlar: 1) virustotal.com adresine gidin. 2) Dosyanızı oraya yükleyip tarama bitsin. 3) Tarama temiz çıkarsa Kasaport'a dönüp 'Yükle' butonuna basın. Sistem dosyanızın parmak izini (SHA-256) hesaplayıp VirusTotal'da otomatik kontrol eder. Eğer dosya VirusTotal'da bulunamazsa veya zararlı çıkarsa yükleme reddedilir.",
+      title: "4. Güvenlik Önkoşulu: VirusTotal Doğrulaması",
+      body: "Sistem güvenliğinin korunması amacıyla yüklenecek her dosyanın önceden VirusTotal platformunda taranmış olması zorunludur. İşlem akışı: (1) virustotal.com adresine erişim sağlayın, (2) ilgili dosyayı yükleyerek taramanın tamamlanmasını bekleyin, (3) sonuç temiz ise Filexa üzerinden yükleme işlemini başlatın. Platform, dosyanın SHA-256 özetini hesaplayarak VirusTotal kayıtlarıyla otomatik doğrulama gerçekleştirir. Kayıt bulunamayan veya zararlı içerik tespit edilen dosyaların yüklenmesi sistem tarafından reddedilir.",
     },
     {
       icon: Upload,
-      title: "5) Dosya yükleme",
-      body: "'Yükle' butonuna tıklayın, bilgisayarınızdan dosyayı seçin. Üst kısımda yüzde göstergesi ilerlerken alt satırda 'VirusTotal kontrol ediliyor...' yazısı göreceksiniz. Tamamlanınca dosya listede görünür. Tek seferde 5 GB'a kadar yükleyebilirsiniz; toplam alanınız hesabınıza tanımlı kotayla sınırlıdır.",
+      title: "5. Dosya Yükleme İşlemi",
+      body: "'Yükle' düğmesi aracılığıyla yerel cihazınızdan dosya seçimi yapabilirsiniz. Yükleme sırasında ilerleme oranı ve VirusTotal doğrulama durumu eş zamanlı olarak görüntülenir. İşlem tamamlandığında dosya, ilgili klasörde listelenir. Tek bir dosya için azami boyut 5 GB olup, toplam depolama hacminiz hesabınıza tanımlı kota ile sınırlandırılmıştır.",
     },
     {
       icon: Eye,
-      title: "6) Önizleme ve indirme",
-      body: "Bir dosyanın yanındaki göz ikonuna basarak resim, video, ses, PDF veya metin dosyalarını sayfadan ayrılmadan görüntüleyebilirsiniz. İndirmek için ok ikonuna basın; tarayıcınız indirmeyi başlatır. PDF açılmazsa 'Yeni sekmede aç' bağlantısını kullanın.",
+      title: "6. Önizleme ve İndirme",
+      body: "Dosya satırındaki önizleme (göz) simgesine tıklayarak görsel, video, ses, PDF ve metin biçimindeki dosyaları açılan pencere içerisinde, sayfadan ayrılmadan inceleyebilirsiniz. İndirme simgesi ise dosyayı doğrudan yerel cihazınıza aktarır.",
     },
     {
       icon: Share2,
-      title: "7) Dosya paylaşımı",
-      body: "Paylaş ikonuna basıp bir bağlantı oluşturabilirsiniz. İsteğe bağlı seçenekler: şifre koyma, son kullanma tarihi belirleme, en fazla kaç kez indirilebileceğini sınırlama, yalnızca giriş yapmış kullanıcıların erişebilmesi. Oluşturulan bağlantıyı dilediğiniz kişiye gönderebilirsiniz. 'Paylaşımlarım' panelinden bağlantıları iptal edebilirsiniz.",
+      title: "7. Dosya Paylaşımı",
+      body: "Paylaşım simgesi aracılığıyla dosyalarınız için güvenli erişim bağlantıları oluşturabilirsiniz. Bağlantıya şifre koruması ekleyebilir, son kullanma tarihi tanımlayabilir, indirme adedini sınırlandırabilir veya erişimi yalnızca kimliği doğrulanmış kullanıcılarla kısıtlayabilirsiniz. Oluşturulan tüm bağlantılar 'Paylaşımlarım' panelinden yönetilebilir ve gerektiğinde iptal edilebilir.",
     },
     {
       icon: Download,
-      title: "8) Toplu işlemler",
-      body: "Dosyaların yanındaki kutucukları işaretleyerek birden fazla dosya seçebilirsiniz. Üst menüden hepsini tek ZIP halinde indirebilir veya toptan silebilirsiniz. Klasörler de aynı anda seçilebilir; silindiklerinde içlerindeki tüm dosyalar da silinir, dikkat edin.",
+      title: "8. Toplu İşlemler",
+      body: "Listedeki onay kutuları yardımıyla birden fazla dosya veya klasörü aynı anda seçebilirsiniz. Üst araç çubuğu üzerinden seçili öğeleri ZIP biçiminde indirebilir veya topluca silebilirsiniz. Klasör silme işlemi, klasör içerisindeki tüm dosyaları geri alınamaz biçimde kaldırır; bu nedenle işlem öncesi seçimlerinizi gözden geçirmeniz önerilir.",
     },
     {
       icon: HelpCircle,
-      title: "9) Bir sorun mu var?",
-      body: "Şifrenizi unuttuysanız veya hesabınız kilitlendiyse yöneticinize başvurun. Yükleme 'VirusTotal'da bulunamadı' hatası verirse, dosyayı önce virustotal.com adresine yükleyip taramayı bitirmeyi unutmayın.",
+      title: "9. Destek ve Sorun Giderme",
+      body: "Şifrenizi unutmanız veya hesabınızın askıya alınması durumunda lütfen sistem yöneticinizle iletişime geçiniz. 'VirusTotal kaydı bulunamadı' uyarısı alınması halinde, dosyanın virustotal.com platformunda tarandığından ve sonucun tamamlandığından emin olunuz.",
     },
   ];
   return (
@@ -140,10 +140,10 @@ function UserGuideDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="size-5 text-primary" /> Kasaport Kullanım Rehberi
+            <BookOpen className="size-5 text-primary" /> Filexa Kullanım Kılavuzu
           </DialogTitle>
           <DialogDescription>
-            Adım adım, hiçbir teknik bilgi gerektirmeden. Anlamadığınız bir yer olursa yöneticinize sorun.
+            Platformun temel işlevlerine ilişkin adım adım kurumsal kullanım kılavuzu. Ek bilgi gereken durumlarda sistem yöneticinizle iletişime geçebilirsiniz.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[65vh] pr-4">
@@ -161,7 +161,7 @@ function UserGuideDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
             ))}
           </ol>
           <div className="mt-6 p-3 rounded-md bg-muted/50 text-xs text-muted-foreground">
-            İpucu: Bu rehbere giriş ekranındaki "Kullanım rehberini aç" butonuyla her zaman tekrar ulaşabilirsiniz.
+            Not: Bu kılavuza giriş ekranındaki "Kullanım Kılavuzunu Görüntüle" düğmesi aracılığıyla istediğiniz zaman yeniden erişebilirsiniz.
           </div>
         </ScrollArea>
       </DialogContent>
