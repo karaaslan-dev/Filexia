@@ -41,6 +41,7 @@ export type Database = {
       files: {
         Row: {
           created_at: string
+          folder_id: string | null
           id: string
           mime_type: string | null
           name: string
@@ -50,6 +51,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           name: string
@@ -59,6 +61,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           name?: string
@@ -66,7 +69,57 @@ export type Database = {
           size_bytes?: number
           storage_path?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "files_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_owner_profile_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

@@ -59,6 +59,9 @@ function AuthedLayout() {
       <main className="container mx-auto px-4 py-8">
         <Outlet />
       </main>
+      <footer className="border-t mt-12 py-6 text-center text-xs text-muted-foreground">
+        Geliştirici: <span className="font-medium text-foreground">Enes KARAASLAN</span>
+      </footer>
     </div>
   );
 }

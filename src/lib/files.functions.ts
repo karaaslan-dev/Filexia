@@ -21,7 +21,7 @@ export const listMyFiles = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("files")
-      .select("id, name, size_bytes, mime_type, created_at, storage_path")
+      .select("id, name, size_bytes, mime_type, created_at, storage_path, folder_id")
       .eq("owner_id", context.userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -32,12 +32,13 @@ export const listMyFiles = createServerFn({ method: "GET" })
 // delete the uploaded object so storage doesn't drift from the files table.
 export const registerFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { storage_path: string; name: string; size_bytes: number; mime_type: string }) =>
+  .inputValidator((d: { storage_path: string; name: string; size_bytes: number; mime_type: string; folder_id?: string | null }) =>
     z.object({
       storage_path: z.string().min(1).max(512),
       name: z.string().min(1).max(255),
       size_bytes: z.number().int().positive(),
       mime_type: z.string().max(255),
+      folder_id: z.string().uuid().nullable().optional(),
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
@@ -75,6 +76,11 @@ export const registerFile = createServerFn({ method: "POST" })
       throw new Error("Storage quota exceeded");
     }
 
+    if (data.folder_id) {
+      const { data: f } = await context.supabase.from("folders").select("id").eq("id", data.folder_id).eq("owner_id", context.userId).maybeSingle();
+      if (!f) { await cleanup(); throw new Error("Klasör bulunamadı"); }
+    }
+
     const { data: inserted, error } = await context.supabase
       .from("files")
       .insert({
@@ -83,6 +89,7 @@ export const registerFile = createServerFn({ method: "POST" })
         storage_path: data.storage_path,
         size_bytes: data.size_bytes,
         mime_type: data.mime_type,
+        folder_id: data.folder_id ?? null,
       })
       .select("id")
       .single();
