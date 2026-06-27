@@ -21,6 +21,15 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import JSZip from "jszip";
+import {
+  createShareLink, listMyShareLinks, revokeShareLink, deleteShareLink,
+} from "@/lib/share.functions";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Share2, Copy, Ban, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/drive")({
   head: () => ({ meta: [{ title: "Dosyalarım — Vaultly" }] }),
@@ -47,6 +56,10 @@ function DrivePage() {
   const rmFolder = useServerFn(deleteFolder);
   const bulkDel = useServerFn(bulkDeleteFiles);
   const bulkUrls = useServerFn(getBulkDownloadUrls);
+  const fetchLinks = useServerFn(listMyShareLinks);
+  const mkShare = useServerFn(createShareLink);
+  const revokeLink = useServerFn(revokeShareLink);
+  const delLink = useServerFn(deleteShareLink);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchProfile() });
   const { data: files = [] } = useQuery({ queryKey: ["files"], queryFn: () => fetchFiles() });
@@ -58,6 +71,8 @@ function DrivePage() {
   const [selFolders, setSelFolders] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState<{ name: string; progress: number } | null>(null);
   const [zipping, setZipping] = useState(false);
+  const [shareFor, setShareFor] = useState<{ id: string; name: string } | null>(null);
+  const [linksOpen, setLinksOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const profile = me?.profile;
@@ -228,6 +243,9 @@ function DrivePage() {
                 <Button onClick={() => inputRef.current?.click()} disabled={!!uploading || !profile?.is_active} className="flex-1 sm:flex-none">
                   <Upload className="size-4 sm:mr-2" /><span className="hidden sm:inline">Yükle</span>
                 </Button>
+                <Button variant="outline" onClick={() => setLinksOpen(true)} className="flex-1 sm:flex-none" title="Paylaşımlarım">
+                  <Share2 className="size-4 sm:mr-2" /><span className="hidden sm:inline">Paylaşımlar</span>
+                </Button>
                 <input ref={inputRef} type="file" className="hidden" onChange={onPick} />
               </div>
             </div>
@@ -334,6 +352,9 @@ function DrivePage() {
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => onDownload(f.id)}><Download className="size-4" /></Button>
+                    <Button size="sm" variant="ghost" title="Paylaş" onClick={() => setShareFor({ id: f.id, name: f.name })}>
+                      <Share2 className="size-4" />
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => {
                       if (confirm(`"${f.name}" silinsin mi?`)) delMut.mutate(f.id, {
                         onSuccess: () => toast.success("Dosya silindi"),
