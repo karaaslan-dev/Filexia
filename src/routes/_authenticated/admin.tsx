@@ -207,13 +207,13 @@ function UsersTab() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-left">
               <tr>
-                <th className="p-3">E-posta</th>
-                <th className="p-3">Ad</th>
-                <th className="p-3">Kullanım</th>
-                <th className="p-3">Kota (MB)</th>
-                <th className="p-3">Durum</th>
-                <th className="p-3">Rol</th>
-                <th className="p-3 text-right">İşlemler</th>
+                <th className="p-3">{t("ad.colEmail")}</th>
+                <th className="p-3">{t("ad.colName")}</th>
+                <th className="p-3">{t("ad.colUsage")}</th>
+                <th className="p-3">{t("ad.colQuota")}</th>
+                <th className="p-3">{t("ad.colStatus")}</th>
+                <th className="p-3">{t("ad.colRole")}</th>
+                <th className="p-3 text-right">{t("ad.colActions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -231,7 +231,7 @@ function UsersTab() {
                         onSave={async (v) => {
                           try {
                             await setQuota({ data: { user_id: u.id, quota_mb: v } });
-                            toast.success("Kota güncellendi");
+                            toast.success(t("ad.quotaUpdated"));
                             refresh();
                           } catch (e: any) { toast.error(e.message); }
                         }}
@@ -241,36 +241,36 @@ function UsersTab() {
                       <Switch
                         checked={u.is_active}
                         onCheckedChange={async (v) => {
-                          try { await setActive({ data: { user_id: u.id, is_active: v } }); toast.success(v ? "Aktifleştirildi" : "Devre dışı"); refresh(); }
+                          try { await setActive({ data: { user_id: u.id, is_active: v } }); toast.success(v ? t("ad.activated") : t("ad.deactivated")); refresh(); }
                           catch (e: any) { toast.error(e.message); }
                         }}
                       />
                     </td>
                     <td className="p-3">
-                      {isAdmin ? <Badge>Admin</Badge> : <Badge variant="secondary">Kullanıcı</Badge>}
+                      {isAdmin ? <Badge>Admin</Badge> : <Badge variant="secondary">{t("settings.roleUser")}</Badge>}
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" title={isAdmin ? "Admin yetkisini kaldır" : "Admin yap"}
+                        <Button size="sm" variant="ghost" title={isAdmin ? t("ad.removeAdmin") : t("ad.makeAdmin")}
                           onClick={async () => {
                             try { await setAdmin({ data: { user_id: u.id, make_admin: !isAdmin } }); refresh(); }
                             catch (e: any) { toast.error(e.message); }
                           }}>
                           {isAdmin ? <ShieldOff className="size-4" /> : <ShieldCheck className="size-4" />}
                         </Button>
-                        <Button size="sm" variant="ghost" title="Şifre sıfırla"
+                        <Button size="sm" variant="ghost" title={t("ad.resetPw")}
                           onClick={async () => {
-                            const np = prompt("Yeni geçici şifre (min 8 karakter):");
+                            const np = prompt(t("ad.resetPwPrompt"));
                             if (!np || np.length < 8) return;
-                            try { await resetPw({ data: { user_id: u.id, new_password: np } }); toast.success("Şifre sıfırlandı"); }
+                            try { await resetPw({ data: { user_id: u.id, new_password: np } }); toast.success(t("ad.pwReset")); }
                             catch (e: any) { toast.error(e.message); }
                           }}>
                           <KeyRound className="size-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" title="Sil"
+                        <Button size="sm" variant="ghost" title={t("common.delete")}
                           onClick={async () => {
-                            if (!confirm(`${u.email} ve tüm dosyaları silinsin mi?`)) return;
-                            try { await del({ data: { user_id: u.id } }); toast.success("Silindi"); refresh(); }
+                            if (!confirm(t("ad.deleteUserConfirm", u.email))) return;
+                            try { await del({ data: { user_id: u.id } }); toast.success(t("common.deleted")); refresh(); }
                             catch (e: any) { toast.error(e.message); }
                           }}>
                           <Trash2 className="size-4 text-destructive" />
