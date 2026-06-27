@@ -69,6 +69,9 @@ function AuthPage() {
             </form>
           </CardContent>
         </Card>
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Geliştirici: <span className="font-medium text-foreground">Enes KARAASLAN</span>
+        </p>
       </div>
     </div>
   );
