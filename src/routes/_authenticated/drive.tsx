@@ -21,6 +21,15 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import JSZip from "jszip";
+import {
+  createShareLink, listMyShareLinks, revokeShareLink, deleteShareLink,
+} from "@/lib/share.functions";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Share2, Copy, Ban, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/drive")({
   head: () => ({ meta: [{ title: "Dosyalarım — Vaultly" }] }),
@@ -47,6 +56,10 @@ function DrivePage() {
   const rmFolder = useServerFn(deleteFolder);
   const bulkDel = useServerFn(bulkDeleteFiles);
   const bulkUrls = useServerFn(getBulkDownloadUrls);
+  const fetchLinks = useServerFn(listMyShareLinks);
+  const mkShare = useServerFn(createShareLink);
+  const revokeLink = useServerFn(revokeShareLink);
+  const delLink = useServerFn(deleteShareLink);
 
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchProfile() });
   const { data: files = [] } = useQuery({ queryKey: ["files"], queryFn: () => fetchFiles() });
@@ -58,6 +71,8 @@ function DrivePage() {
   const [selFolders, setSelFolders] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState<{ name: string; progress: number } | null>(null);
   const [zipping, setZipping] = useState(false);
+  const [shareFor, setShareFor] = useState<{ id: string; name: string } | null>(null);
+  const [linksOpen, setLinksOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const profile = me?.profile;
@@ -228,6 +243,9 @@ function DrivePage() {
                 <Button onClick={() => inputRef.current?.click()} disabled={!!uploading || !profile?.is_active} className="flex-1 sm:flex-none">
                   <Upload className="size-4 sm:mr-2" /><span className="hidden sm:inline">Yükle</span>
                 </Button>
+                <Button variant="outline" onClick={() => setLinksOpen(true)} className="flex-1 sm:flex-none" title="Paylaşımlarım">
+                  <Share2 className="size-4 sm:mr-2" /><span className="hidden sm:inline">Paylaşımlar</span>
+                </Button>
                 <input ref={inputRef} type="file" className="hidden" onChange={onPick} />
               </div>
             </div>
@@ -334,6 +352,9 @@ function DrivePage() {
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => onDownload(f.id)}><Download className="size-4" /></Button>
+                    <Button size="sm" variant="ghost" title="Paylaş" onClick={() => setShareFor({ id: f.id, name: f.name })}>
+                      <Share2 className="size-4" />
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => {
                       if (confirm(`"${f.name}" silinsin mi?`)) delMut.mutate(f.id, {
                         onSuccess: () => toast.success("Dosya silindi"),
@@ -349,6 +370,182 @@ function DrivePage() {
           )}
         </CardContent>
       </Card>
+
+      {shareFor && (
+        <ShareDialog
+          file={shareFor}
+          onClose={() => setShareFor(null)}
+          createLink={(payload) => mkShare({ data: { file_id: shareFor.id, ...payload } })}
+        />
+      )}
+
+      <MyLinksDialog
+        open={linksOpen}
+        onOpenChange={setLinksOpen}
+        fetchLinks={() => fetchLinks()}
+        revoke={(id) => revokeLink({ data: { id } })}
+        remove={(id) => delLink({ data: { id } })}
+      />
     </div>
+  );
+}
+
+function ShareDialog({
+  file, onClose, createLink,
+}: { file: { id: string; name: string }; onClose: () => void; createLink: (p: { password?: string; expires_in_hours?: number | null; max_downloads?: number | null; require_auth?: boolean }) => Promise<{ token: string }>; }) {
+  const [usePassword, setUsePassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [useExpiry, setUseExpiry] = useState(true);
+  const [expiresHours, setExpiresHours] = useState("24");
+  const [useLimit, setUseLimit] = useState(false);
+  const [maxDownloads, setMaxDownloads] = useState("10");
+  const [requireAuth, setRequireAuth] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
+
+  async function onCreate() {
+    setBusy(true);
+    try {
+      const { token } = await createLink({
+        password: usePassword && password ? password : undefined,
+        expires_in_hours: useExpiry ? Number(expiresHours) : null,
+        max_downloads: useLimit ? Number(maxDownloads) : null,
+        require_auth: requireAuth,
+      });
+      const url = `${window.location.origin}/s/${token}`;
+      setResultUrl(url);
+      toast.success("Paylaşım bağlantısı oluşturuldu");
+    } catch (e: any) {
+      toast.error("Oluşturulamadı", { description: e.message });
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Paylaşım bağlantısı oluştur</DialogTitle>
+          <DialogDescription className="truncate">{file.name}</DialogDescription>
+        </DialogHeader>
+        {resultUrl ? (
+          <div className="space-y-3">
+            <Label>Bağlantı</Label>
+            <div className="flex gap-2">
+              <Input readOnly value={resultUrl} onFocus={(e) => e.currentTarget.select()} />
+              <Button onClick={() => { navigator.clipboard.writeText(resultUrl); toast.success("Kopyalandı"); }}>
+                <Copy className="size-4" />
+              </Button>
+              <Button variant="outline" onClick={() => window.open(resultUrl, "_blank")}>
+                <ExternalLink className="size-4" />
+              </Button>
+            </div>
+            <DialogFooter><Button onClick={onClose}>Kapat</Button></DialogFooter>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div><Label>Parola koruması</Label><p className="text-xs text-muted-foreground">İndirmek için parola gerekir.</p></div>
+              <Switch checked={usePassword} onCheckedChange={setUsePassword} />
+            </div>
+            {usePassword && <Input type="text" placeholder="Parola (min 4 karakter)" value={password} onChange={(e) => setPassword(e.target.value)} minLength={4} />}
+
+            <div className="flex items-center justify-between gap-3">
+              <div><Label>Son kullanma</Label><p className="text-xs text-muted-foreground">Belirtilen saat sonra geçersiz olur.</p></div>
+              <Switch checked={useExpiry} onCheckedChange={setUseExpiry} />
+            </div>
+            {useExpiry && (
+              <div className="flex items-center gap-2">
+                <Input type="number" min={1} value={expiresHours} onChange={(e) => setExpiresHours(e.target.value)} className="w-32" />
+                <span className="text-sm text-muted-foreground">saat</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3">
+              <div><Label>İndirme limiti</Label><p className="text-xs text-muted-foreground">N kez indirildikten sonra kapanır.</p></div>
+              <Switch checked={useLimit} onCheckedChange={setUseLimit} />
+            </div>
+            {useLimit && (
+              <div className="flex items-center gap-2">
+                <Input type="number" min={1} value={maxDownloads} onChange={(e) => setMaxDownloads(e.target.value)} className="w-32" />
+                <span className="text-sm text-muted-foreground">indirme</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3">
+              <div><Label>Yalnız giriş yapanlar</Label><p className="text-xs text-muted-foreground">Sisteme kayıtlı kullanıcılar erişebilir.</p></div>
+              <Switch checked={requireAuth} onCheckedChange={setRequireAuth} />
+            </div>
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={onClose}>İptal</Button>
+              <Button onClick={onCreate} disabled={busy || (usePassword && password.length < 4)}>
+                {busy ? "Oluşturuluyor…" : "Bağlantı Oluştur"}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MyLinksDialog({
+  open, onOpenChange, fetchLinks, revoke, remove,
+}: { open: boolean; onOpenChange: (v: boolean) => void; fetchLinks: () => Promise<any[]>; revoke: (id: string) => Promise<any>; remove: (id: string) => Promise<any>; }) {
+  const qc = useQueryClient();
+  const { data: links = [], refetch } = useQuery({
+    queryKey: ["share-links"],
+    queryFn: () => fetchLinks(),
+    enabled: open,
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Paylaşımlarım</DialogTitle>
+          <DialogDescription>{links.length} bağlantı</DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6 divide-y">
+          {links.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">Henüz paylaşım yok.</p>
+          ) : links.map((l: any) => {
+            const url = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${l.token}`;
+            const expired = l.expires_at && new Date(l.expires_at) < new Date();
+            const exhausted = l.max_downloads != null && l.download_count >= l.max_downloads;
+            return (
+              <div key={l.id} className="py-3 space-y-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="font-medium truncate flex-1">{l.files?.name ?? "Dosya"}</div>
+                  {l.is_revoked && <span className="text-xs text-destructive">İptal</span>}
+                  {!l.is_revoked && expired && <span className="text-xs text-destructive">Süresi doldu</span>}
+                  {!l.is_revoked && !expired && exhausted && <span className="text-xs text-destructive">Limit doldu</span>}
+                </div>
+                <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
+                  {l.has_password && <span>🔒 Parolalı</span>}
+                  {l.require_auth && <span>👤 Üyeler</span>}
+                  {l.expires_at && <span>⏱ {new Date(l.expires_at).toLocaleString("tr-TR")}</span>}
+                  <span>↓ {l.download_count}{l.max_downloads ? ` / ${l.max_downloads}` : ""}</span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Input readOnly value={url} className="h-8 text-xs flex-1 min-w-0" onFocus={(e) => e.currentTarget.select()} />
+                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success("Kopyalandı"); }}>
+                    <Copy className="size-4" />
+                  </Button>
+                  {!l.is_revoked && (
+                    <Button size="sm" variant="outline" onClick={async () => { await revoke(l.id); toast.success("İptal edildi"); refetch(); qc.invalidateQueries({ queryKey: ["share-links"] }); }}>
+                      <Ban className="size-4" />
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={async () => { if (!confirm("Bağlantı silinsin mi?")) return; await remove(l.id); toast.success("Silindi"); refetch(); }}>
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -157,6 +157,59 @@ export type Database = {
         }
         Relationships: []
       }
+      share_links: {
+        Row: {
+          created_at: string
+          download_count: number
+          expires_at: string | null
+          file_id: string
+          id: string
+          is_revoked: boolean
+          max_downloads: number | null
+          owner_id: string
+          password_hash: string | null
+          require_auth: boolean
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          download_count?: number
+          expires_at?: string | null
+          file_id: string
+          id?: string
+          is_revoked?: boolean
+          max_downloads?: number | null
+          owner_id: string
+          password_hash?: string | null
+          require_auth?: boolean
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          download_count?: number
+          expires_at?: string | null
+          file_id?: string
+          id?: string
+          is_revoked?: boolean
+          max_downloads?: number | null
+          owner_id?: string
+          password_hash?: string | null
+          require_auth?: boolean
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_links_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
