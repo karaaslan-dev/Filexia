@@ -14,10 +14,10 @@ export const listMyShareLinks = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("share_links")
-      .select("id, file_id, token, expires_at, max_downloads, download_count, require_auth, is_revoked, password_hash, created_at, files:file_id(name, size_bytes)")
+      .select("id, file_id, token, expires_at, max_downloads, download_count, require_auth, is_revoked, created_at, files:file_id(name, size_bytes)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((l: any) => ({ ...l, has_password: !!l.password_hash, password_hash: undefined }));
+    return (data ?? []).map((l: any) => ({ ...l, has_password: false }));
   });
 
 export const createShareLink = createServerFn({ method: "POST" })
