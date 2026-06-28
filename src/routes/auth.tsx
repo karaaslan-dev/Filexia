@@ -10,6 +10,9 @@ import { Lock, ShieldCheck, BookOpen, LogIn, Upload, ShieldAlert, FolderTree, Sh
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useT, LanguageToggle } from "@/lib/i18n";
+import { getRecaptchaToken } from "@/lib/recaptcha";
+import { useServerFn } from "@tanstack/react-start";
+import { verifyRecaptcha } from "@/lib/recaptcha.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Giriş — Filexa" }] }),
@@ -23,6 +26,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const verifyCaptcha = useServerFn(verifyRecaptcha);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -33,6 +37,19 @@ function AuthPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    try {
+      const token = await getRecaptchaToken("login");
+      const check = await verifyCaptcha({ data: { token, action: "login" } });
+      if (!check.ok) {
+        setLoading(false);
+        toast.error(t("auth.failed"), { description: "Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin." });
+        return;
+      }
+    } catch {
+      setLoading(false);
+      toast.error(t("auth.failed"), { description: "Captcha yüklenemedi. Sayfayı yenileyin." });
+      return;
+    }
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) {
@@ -81,6 +98,13 @@ function AuthPage() {
         </Card>
         <p className="mt-6 text-center text-xs text-muted-foreground">
           {t("footer.developer")} <span className="font-medium text-foreground">Enes KARAASLAN</span>
+        </p>
+        <p className="mt-2 text-center text-[10px] text-muted-foreground">
+          Bu site reCAPTCHA ile korunmaktadır. Google{" "}
+          <a href="https://policies.google.com/privacy" className="underline" target="_blank" rel="noreferrer">Gizlilik</a>{" "}
+          ve{" "}
+          <a href="https://policies.google.com/terms" className="underline" target="_blank" rel="noreferrer">Şartlar</a>{" "}
+          geçerlidir.
         </p>
       </div>
       <UserGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />

@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LanguageProvider, useT } from "@/lib/i18n";
+import { RECAPTCHA_SITE_KEY } from "@/lib/recaptcha";
 
 function NotFoundComponent() {
   const t = useT();
@@ -93,6 +94,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+    ],
+    scripts: [
+      {
+        src: `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`,
+        async: true,
+        defer: true,
       },
     ],
   }),
