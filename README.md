@@ -8,13 +8,12 @@ Filexia is a high-performance, user-friendly file ecosystem developed to meet mo
 
 ## Key Features
 
-
-| Function                 | Description                                                                                | Benefit            |
-| :------------------------ | :------------------------------------------------------------------------ ---------------- | :------------------- |
-| **High Performance**    | Organize large-scale files and data blocks with minimal resource consumption.   | Low Latency     |
-| **Advanced Filtering** | Smart search based on file type, size, or custom metadata tags.               | Time Savings      |
-| **Secure Transfer**     | Encrypted and traceable transfer mechanisms that preserve data integrity.     | End-to-End Security |
-| **Cross-Platform**        | A seamless experience on every platform, thanks to both its developer-friendly structure and simple interface. | Flexible Usage      |
+| Function | Description | Benefit |
+| :--- | :--- | :--- |
+| **High Performance** | Organize large-scale files and data blocks with minimal resource consumption. | Low Latency |
+| **Advanced Filtering** | Smart search based on file type, size, or custom metadata tags. | Time Savings |
+| **Secure Transfer** | Encrypted and traceable transfer mechanisms that preserve data integrity. | End-to-End Security |
+| **Cross-Platform** | A seamless experience on every platform, thanks to both its developer-friendly structure and simple interface. | Flexible Usage |
 
 ---
 
