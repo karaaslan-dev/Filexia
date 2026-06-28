@@ -87,8 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Filexa — Secure File Drive" },
       { name: "twitter:description", content: "A closed-system, quota-based, advanced file upload and sharing drive." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/yEDsNxtcIIbE1y7Iugh518nfIUg2/social-images/social-1782653146801-icons8-secured-cloud-storage-100.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/yEDsNxtcIIbE1y7Iugh518nfIUg2/social-images/social-1782653146801-icons8-secured-cloud-storage-100.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/yEDsNxtcIIbE1y7Iugh518nfIUg2/social-images/social-1782655571728-Adsız_tasarım.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/yEDsNxtcIIbE1y7Iugh518nfIUg2/social-images/social-1782655571728-Adsız_tasarım.webp" },
     ],
     links: [
       {
