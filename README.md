@@ -66,5 +66,3 @@ npm start
 
 This project is licensed under the MIT License. For details, see the `LICENSE` file.
 
-
-Translated with DeepL.com (free version)
