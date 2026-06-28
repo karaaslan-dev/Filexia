@@ -77,6 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Filexa — Secure File Drive" },
+      { name: "google-site-verification", content: "flnjwRGqfsX-3ZWf6yecKD_yyI0lgRBzDbS4z9BHDT4" },
       { name: "description", content: "A closed-system, quota-based, advanced file upload and sharing drive." },
       { property: "og:title", content: "Filexa — Secure File Drive" },
       { property: "og:description", content: "A closed-system, quota-based, advanced file upload and sharing drive." },
