@@ -76,13 +76,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Filexa — Güvenli Dosya Sürücüsü" },
-      { name: "description", content: "Kapalı sistem, kotalı, gelişmiş bir dosya yükleme ve paylaşım sürücüsü." },
-      { property: "og:title", content: "Filexa — Güvenli Dosya Sürücüsü" },
-      { property: "og:description", content: "Kapalı sistem, kotalı, gelişmiş bir dosya yükleme ve paylaşım sürücüsü." },
+      { title: "Filexa — Secure File Drive" },
+      { name: "description", content: "A closed-system, quota-based, advanced file upload and sharing drive." },
+      { property: "og:title", content: "Filexa — Secure File Drive" },
+      { property: "og:description", content: "A closed-system, quota-based, advanced file upload and sharing drive." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Filexa — Secure File Drive" },
+      { name: "twitter:description", content: "A closed-system, quota-based, advanced file upload and sharing drive." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/yEDsNxtcIIbE1y7Iugh518nfIUg2/social-images/social-1782644827273-icons8-secured-cloud-storage-100.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/yEDsNxtcIIbE1y7Iugh518nfIUg2/social-images/social-1782644827273-icons8-secured-cloud-storage-100.webp" },
     ],
     links: [
       {
