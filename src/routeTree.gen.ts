@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -18,6 +19,11 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDriveRouteImport } from './routes/_authenticated/drive'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
@@ -62,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/drive': typeof AuthenticatedDriveRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/drive': typeof AuthenticatedDriveRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/setup': typeof SetupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/drive': typeof AuthenticatedDriveRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -93,18 +102,28 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/setup'
+    | '/sitemap.xml'
     | '/admin'
     | '/drive'
     | '/settings'
     | '/s/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/setup' | '/admin' | '/drive' | '/settings' | '/s/$token'
+  to:
+    | '/'
+    | '/auth'
+    | '/setup'
+    | '/sitemap.xml'
+    | '/admin'
+    | '/drive'
+    | '/settings'
+    | '/s/$token'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/setup'
+    | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/_authenticated/drive'
     | '/_authenticated/settings'
@@ -116,11 +135,19 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   SetupRoute: typeof SetupRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   STokenRoute: typeof STokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
@@ -200,6 +227,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   SetupRoute: SetupRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   STokenRoute: STokenRoute,
 }
 export const routeTree = rootRouteImport
